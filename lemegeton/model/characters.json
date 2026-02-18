@@ -1,0 +1,634 @@
+[
+    {
+        "id": "trouble_brewing_001",
+        "name": "Washerwoman",
+        "imageName": "Icon_Washerwoman",
+        "description": "Defense Stance",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_002",
+        "name": "Librarian",
+        "imageName": "Icon_Librarian",
+        "description": "Defense Stance",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_003",
+        "name": "Investigator",
+        "imageName": "Icon_Investigator",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_004",
+        "name": "Chef",
+        "imageName": "Icon_Chef",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_005",
+        "name": "Empath",
+        "imageName": "Icon_Empath",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_006",
+        "name": "Fortune Teller",
+        "imageName": "Icon_Fortune_Teller",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_007",
+        "name": "Undertaker",
+        "imageName": "Icon_Undertaker",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_008",
+        "name": "Monk",
+        "imageName": "Icon_Monk",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_009",
+        "name": "Ravenkeeper",
+        "imageName": "Icon_Ravenkeeper",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_010",
+        "name": "Virgin",
+        "imageName": "Icon_Virgin",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_011",
+        "name": "Slayer",
+        "imageName": "Icon_Slayer",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_012",
+        "name": "Soldier",
+        "imageName": "Icon_Soldier",
+        "description": "You are safe from the Demon.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_013",
+        "name": "Mayor",
+        "imageName": "Icon_Mayor",
+        "description": "If only 3 players live & no execution occurs, your team wins. If you die at night, another player might die instead.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "trouble_brewing_014",
+        "name": "Butler",
+        "imageName": "Icon_Butler",
+        "description": "Each night, choose a player (not yourself): tomorrow, you may only vote if they are voting too.",
+        "type": "outsider"
+    },
+    {
+        "id": "trouble_brewing_015",
+        "name": "Drunk",
+        "imageName": "Icon_Drunk",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "trouble_brewing_016",
+        "name": "Recluse",
+        "imageName": "Icon_Recluse",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "trouble_brewing_017",
+        "name": "Saint",
+        "imageName": "Icon_Saint",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "trouble_brewing_018",
+        "name": "Poisoner",
+        "imageName": "Icon_Poisoner",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "trouble_brewing_019",
+        "name": "Spy",
+        "imageName": "Icon_Spy",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "trouble_brewing_020",
+        "name": "Scarlet Woman",
+        "imageName": "Icon_Scarlet_Woman",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "trouble_brewing_021",
+        "name": "Baron",
+        "imageName": "Icon_Baron",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "trouble_brewing_022",
+        "name": "Imp",
+        "imageName": "Icon_Imp",
+        "description": "",
+        "type": "demon"
+    },
+    
+    
+    {
+        "id": "bad_moon_001",
+        "name": "Grandmother",
+        "imageName": "Icon_Grandmother",
+        "description": "You start knowing a good player & their character. If the Demon kills them, you die too.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_002",
+        "name": "Sailor",
+        "imageName": "Icon_Sailor",
+        "description": "Defense Stance",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_003",
+        "name": "Chambermaid",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_004",
+        "name": "Exorcist",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_005",
+        "name": "Innkeeper",
+        "imageName": "Icon_Innkeeper",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_006",
+        "name": "Gambler",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_007",
+        "name": "Gossip",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_008",
+        "name": "Courtier",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_009",
+        "name": "Professor",
+        "imageName": "Icon_Professor",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_010",
+        "name": "Minstrel",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_011",
+        "name": "Tea Lady",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_012",
+        "name": "Pacifist",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_013",
+        "name": "Fool",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "bad_moon_014",
+        "name": "Goon",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "bad_moon_015",
+        "name": "Lunatic",
+        "imageName": "Icon_Lunatic",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "bad_moon_016",
+        "name": "Tinker",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "bad_moon_017",
+        "name": "Moonchild",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "bad_moon_018",
+        "name": "Godfather",
+        "imageName": "Icon_Godfather",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "bad_moon_019",
+        "name": "Devil's Advocate",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "bad_moon_020",
+        "name": "Assassin",
+        "imageName": "Icon_Assassin",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "bad_moon_021",
+        "name": "Mastermind",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "bad_moon_022",
+        "name": "Zombuul",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "bad_moon_023",
+        "name": "Pukka",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "bad_moon_024",
+        "name": "Shabaloth",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "bad_moon_025",
+        "name": "Po",
+        "imageName": "Icon_Po",
+        "description": "",
+        "type": "demon"
+    },
+    
+    
+    {
+        "id": "sects_violets_001",
+        "name": "Clockmaker",
+        "imageName": "Icon_Clockmaker",
+        "description": "You start knowing how many steps from the Demon to its nearest Minion.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_002",
+        "name": "Dreamer",
+        "imageName": "Icon_",
+        "description": "Defense Stance",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_003",
+        "name": "Snake Charmer",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_004",
+        "name": "Mathematician",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_005",
+        "name": "Flowergirl",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_006",
+        "name": "Town Crier",
+        "imageName": "Icon_Town_Crier",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_007",
+        "name": "Oracle",
+        "imageName": "Icon_Oracle",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_008",
+        "name": "Savant",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_009",
+        "name": "Seamstress",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_010",
+        "name": "Philosopher",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_011",
+        "name": "Artist",
+        "imageName": "Icon_Artist",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_012",
+        "name": "Juggler",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_013",
+        "name": "Sage",
+        "imageName": "Icon_Sage",
+        "description": "",
+        "type": "townsfolk"
+    },
+    {
+        "id": "sects_violets_014",
+        "name": "Mutant",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "sects_violets_015",
+        "name": "Sweetheart",
+        "imageName": "Icon_Sweetheart",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "sects_violets_016",
+        "name": "Barber",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "sects_violets_017",
+        "name": "Klutz",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "sects_violets_018",
+        "name": "Evil Twin",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "sects_violets_019",
+        "name": "Witch",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "sects_violets_020",
+        "name": "Cerenovus",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "sects_violets_021",
+        "name": "Pit-Hag",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "sects_violets_022",
+        "name": "Fang Gu",
+        "imageName": "Icon_Fang_Gu",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "sects_violets_023",
+        "name": "Vigormortis",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "sects_violets_024",
+        "name": "No Dashii",
+        "imageName": "Icon_No_Dashii",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "sects_violets_025",
+        "name": "Vortox",
+        "imageName": "Icon_",
+        "description": "",
+        "type": "demon"
+    },
+    
+    
+    
+    {
+        "id": "custom_001",
+        "name": "Poppy Grower",
+        "imageName": "Icon_Poppy_Grower",
+        "description": "Minions & Demons do not know each other. If you die, they learn who each other are that night.",
+        "type": "townsfolk"
+    },
+    
+    
+    {
+        "id": "special_halloween_001",
+        "name": "Katniss",
+        "imageName": "Special_Icon_Katniss",
+        "description": "[라스트맨 스탠딩] 악마와 캣니스, 단 두 명만이 살아 남아 게임이 종료되면, 선한 플레이어들이 역전승한다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_002",
+        "name": "Conan",
+        "imageName": "Special_Icon_Conan",
+        "description": "[범인은 이 안에 있어] 매일 낮에 1번 씩, 공개적으로 모든 악한 플레이어들을 추리할 수 있다 (죽은 플레이어 포함). 모두 맞았다면, 즉시 선한 플레이어들이 승리한다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_003",
+        "name": "Edward",
+        "imageName": "Special_Icon_Edward",
+        "description": "[등가교환 연성] 매일 밤*, 플레이어 2명을 선택하여 사용할 수 있다. 그 2명이 모두 살아 있고, 선한 플레이어 1명과 악한 플레이어 1명씩을 골랐다면 그 2명이 죽는다. [리바운드] 죽은 플레이어를1명이라도 골랐거나 진영이 같은 플레이어 2명을 골랐다면, 에드워드 본인이 죽을 수 있다. 이 경우, 그 2명에게는 아무 일도 일어나지 않는다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_004",
+        "name": "Harry Potter",
+        "imageName": "Special_Icon_Harry",
+        "description": "[릴리의 희생 마법] 밤*에 악한 플레이어의 능력으로 죽게 된 경우, 최초 1회 죽지 않는다. 해당 밤의 악한 캐릭터 행동이 끝난 후, 플레이어 1명을 선택한다. 해당 플레이어가 악한 플레이어였다면 영구적으로 취한다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_005",
+        "name": "Rumi",
+        "imageName": "Special_Icon_Rumi",
+        "description": "[데몬의 문양] 첫 날 밤, 악마에게 미니언으로 보인다. [황금 혼문] 게임 중 한 번, 밤*이 시작할 때 사용할 수 있다. 해당 밤에는 누구도 악한 플레이어들의 능력으로 인해 죽거나 중독되지 않는다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_006",
+        "name": "Player 456",
+        "imageName": "Special_Icon_Player_456",
+        "description": "[얼음!!!] 매일 밤*, 밤이 끝날 때 살아있는 두 이웃 중 해당 밤에 일어났던 플레이어가 몇 명인지 확인한다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_007",
+        "name": "Ariel",
+        "imageName": "Special_Icon_Ariel",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "special_halloween_008",
+        "name": "도미닉 코브",
+        "imageName": "Special_Icon_Cobb",
+        "description": "[림보] 자신을 마을주민이라 생각하며, 취한 상태이다. [림보 탈출] 낮에 사회자에게 몰래 사용할 수 있다. 그날 밤부터 취하지 않은 해당 마을주민으로 다시 태어난다. 코브 외 다른 캐릭터가 림보 탈출을 시도하면 그 날 밤에 죽을 수 있다",
+        "type": "outsider"
+    },
+    {
+        "id": "special_halloween_009",
+        "name": "Romeo",
+        "imageName": "Special_Icon_Romeo",
+        "description": "",
+        "type": "outsider"
+    },
+    {
+        "id": "special_halloween_010",
+        "name": "Arthas",
+        "imageName": "Special_Icon_Arthas",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "special_halloween_011",
+        "name": "Joker",
+        "imageName": "Special_Icon_Joker",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "special_halloween_012",
+        "name": "Thanos",
+        "imageName": "Special_Icon_Thanos",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "special_halloween_013",
+        "name": "Juliet",
+        "imageName": "Special_Icon_Juliet",
+        "description": "",
+        "type": "minion"
+    },
+    {
+        "id": "special_halloween_014",
+        "name": "Grimhilde",
+        "imageName": "Special_Icon_Grimhilde",
+        "description": "",
+        "type": "demon"
+    },
+    {
+        "id": "special_halloween_015",
+        "name": "꼰대 마 부장",
+        "imageName": "Special_Icon_Manager_Ma",
+        "description": "[라떼는 말이야] 기존 시계탑 캐릭터(회색 음영) 중 몇 개가 게임에 포함되었는지 알고 시작한다.",
+        "type": "townsfolk"
+    },
+    {
+        "id": "special_halloween_016",
+        "name": "카이저 소제",
+        "imageName": "Special_Icon_Keyser",
+        "description": "[니노 막시무스 카이저 소제 쏘냐도르 & 스파르타(?)] +1 or -1 Outsider. 이 게임에 어떤 외부인들이 포함되었는지 알고 시작한다. 다른 플레이어에게 선한 캐릭터로 보일 수 있다 (죽어서도 효과가 유지된다).",
+        "type": "minion"
+    },
+]

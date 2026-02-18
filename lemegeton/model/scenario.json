@@ -1,0 +1,130 @@
+[
+    {
+        "name": "Trouble Brewing",
+        "characters": [
+            "Washerwoman",
+            "Librarian",
+            "Investigator",
+            "Chef",
+            "Empath",
+            "Fortune Teller",
+            "Undertaker",
+            "Monk",
+            "Ravenkeeper",
+            "Virgin",
+            "Slayer",
+            "Soldier",
+            "Mayor",
+            "Butler",
+            "Drunk",
+            "Recluse",
+            "Saint",
+            "Poisoner",
+            "Spy",
+            "Scarlet Woman",
+            "Baron",
+            "Imp"
+        ]
+    },
+    
+    {
+        "name": "Bad Moon Rising",
+        "characters": [
+            "Grandmother",
+            "Sailor",
+            "Chambermaid",
+            "Exorcist",
+            "Innkeeper",
+            "Gambler",
+            "Gossip",
+            "Courtier",
+            "Professor",
+            "Minstrel",
+            "Tea Lady",
+            "Pacifist",
+            "Fool",
+            "Goon",
+            "Lunatic",
+            "Tinker",
+            "Moonchild",
+            "Godfather",
+            "Devil's Advocate",
+            "Assassin",
+            "Mastermind",
+            "Zombuul",
+            "Pukka",
+            "Shabaloth",
+            "Po"
+        ]
+    },
+    
+    
+    {
+        "name": "Sects & Violets",
+        "characters": [
+            "Clockmaker",
+            "Dreamer",
+            "Snake Charmer",
+            "Mathematician",
+            "Flowergirl",
+            "Town Crier",
+            "Oracle",
+            "Savant",
+            "Seamstress",
+            "Philosopher",
+            "Artist",
+            "Juggler",
+            "Sage",
+            "Mutant",
+            "Sweetheart",
+            "Barber",
+            "Klutz",
+            "Evil Twin",
+            "Witch",
+            "Cerenovus",
+            "Pit-Hag",
+            "Fang Gu",
+            "Vigormortis",
+            "No Dashii",
+            "Vortox"
+        ]
+    },
+    
+    
+    {
+        "name": "Poppy Hallucination",
+        "characters": [
+            "Investigator",
+            "Fortune Teller",
+            "Monk",
+            "Virgin",
+            "Grandmother",
+            "Innkeeper",
+            "Professor",
+            "Clockmaker",
+            "Town Crier",
+            "Oracle",
+            "Artist",
+            "Sage",
+            "Poppy Grower",
+            "Drunk",
+            "Recluse",
+            "Lunatic",
+            "Sweetheart",
+            "Poisoner",
+            "Spy",
+            "Godfather",
+            "Assassin",
+            "Imp",
+            "Po",
+            "Fang Gu",
+            "No Dashii"
+        ]
+    },
+    
+    {
+        "name": "Bay Arcade Holloween Special",
+        "characters": [
+        ]
+    },
+]

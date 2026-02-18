@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "Icon_fanggu.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
