@@ -20,15 +20,15 @@ struct EditNameSheetView : View {
                     Button {
                         onComplete(playerName)
                     } label: {
-                        Text("완료")
+                        Text("Done")
                     }
                     .padding()
                 }
-                Text("이름을 입력하자")
+                Text("Add a name")
                     .padding()
             }
             
-            TextField("이름", text: $playerName)
+            TextField("Name", text: $playerName)
                 .focused($keyboardFocused)
                 .onSubmit {
                     onComplete(playerName)

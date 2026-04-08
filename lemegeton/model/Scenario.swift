@@ -5,8 +5,6 @@
 //  Created by Min Hwang on 10/18/25.
 //
 
-
-
 import Foundation
 
 struct Scenario {

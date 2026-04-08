@@ -7,20 +7,15 @@
 
 import Foundation
 import Combine
+import CoreGraphics
 
 class BoardViewModel: ObservableObject {
     
+    private let repo = GameRepo.shared
+    
+    @Published var currentGame: Game
+    @Published var pastGames: [Game]
     @Published var allCharacters: [Character]
-    @Published var scenarios: [Scenario]
-    @Published var inGameCharacters: [Character]
-    // 🎲 State to hold the list of seats currently on the board
-    @Published var sides: [BoardSide : Side] = [
-        .top : Side(),
-        .left : Side(),
-        .right : Side(),
-        .bottom : Side(),
-    ]
-    @Published var isSettingUp: Bool = true
     
     private let characterSaveFileName = "characterState.json"
     private let saveFileName = "gameState.json"
@@ -34,135 +29,113 @@ class BoardViewModel: ObservableObject {
     }
     
     init() {
-        allCharacters = CharacterService.availableCharacters
-        scenarios = CharacterService.scenarios
-        inGameCharacters = []
+        // Sync from GameRepo if available
+        repo.loadCurrentGame()
         
-        loadState()
-        loadCharacters()
-    }
-    
-    /** Set up seats */
-    func addSeatToSide(boardSide: BoardSide, seat: Seat) {
-        sides[boardSide]?.addSeat(seat: seat)
-    }
-    
-    func removeSeat(boardSide: BoardSide, index: Int) {
-        sides[boardSide]?.seats.remove(at: index)
-    }
-    
-    func getSeatIndex(boardSide: BoardSide, seat: Seat) -> Int? {
-        return sides[boardSide]!.seats.firstIndex(where: { $0.id == seat.id})
-    }
-    
-    func updateSetup() {
-        isSettingUp = !isSettingUp
-    }
-    
-    func deathUpon(boardSide: BoardSide, seatIndex: Int) {
-        if (!sides.keys.contains(boardSide) || sides[boardSide]!.seats.count < seatIndex) {
-            return
+        // Initialize repo-backed game if none exists
+        if repo.currentGame == nil {
+            repo.startNewGame()
+            currentGame = repo.currentGame!
+        } else {
+            currentGame = repo.currentGame!
         }
-        sides[boardSide]!.seats[seatIndex].player.isDead = !sides[boardSide]!.seats[seatIndex].player.isDead
+        pastGames = repo.pastGames
+        allCharacters = CharacterService.availableCharacters
     }
     
-    func editSeatName(boardSide: BoardSide, seatIndex: Int, newName: String) {
-        if (!sides.keys.contains(boardSide) || sides[boardSide]!.seats.count < seatIndex) {
-            return
-        }
-        sides[boardSide]?.seats[seatIndex].player.editName(newName: newName)
-    }
+    
+    // MARK: - Dropdown Menu Actions
     
     /** Set up character  */
     func setUpCharacters(characters: [Character]) {
-        self.inGameCharacters = characters
+        currentGame.inGameCharacters = characters
+        saveState()
     }
     
-    /** Update player */
-    func updatePlayerNote(boardSide: BoardSide, seatIndex: Int, note: String) {
-        if (!sides.keys.contains(boardSide) || sides[boardSide]!.seats.count < seatIndex) {
-            return
+    func updateSetup() {
+        currentGame.gameState = currentGame.gameState == .set_up ? .in_game : .set_up
+        repo.saveCurrentGame(currentGame: currentGame)
+    }
+    
+    func canStartGame() -> Bool {
+        let seatCount = currentGame.seats.count
+        return seatCount > 0 && currentGame.inGameCharacters.count >= seatCount
+    }
+    
+    
+    // Reset the entire board
+    func resetBoard() {
+        repo.startNewGame()
+        currentGame = repo.currentGame!
+    }
+    
+    func canEndGame() -> Bool {
+        return currentGame.isAllCharacterConfirmed() &&
+        (currentGame.didAllDemonDie() || currentGame.numAliveCharacters() < Game.FINAL_ALIVE_CHARACTER)
+    }
+    
+    func endGame(resetGame: Bool) {
+        currentGame.gameState = .game_over
+        repo.saveCurrentGame(currentGame: currentGame)
+        repo.endCurrentGame()
+        refreshPastGames()
+        
+        if (resetGame) {
+            repo.startNewGame()
+            currentGame = repo.currentGame!
+        } else {
+            currentGame.clearGameState()
         }
-        sides[boardSide]?.seats[seatIndex].player.updateNote(newNote: note)
     }
     
+    // MARK: - Set Up Board Actions
     
-    /// Manage Game State
+    func addSeat(at point: CGPoint) {
+        currentGame.seats.append(Seat(player: Player(name: "", inGameCharacters: currentGame.inGameCharacters), x: point.x, y: point.y))
+        saveState()
+    }
+    
+    func removeSeat(seat: Seat) {
+        if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            currentGame.seats.remove(at: idx)
+            saveState()
+        }
+    }
+    
+    func deathUpon(seat: Seat) {
+        if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            currentGame.seats[idx].player.isDead = !currentGame.seats[idx].player.isDead
+            saveState()
+        }
+    }
+    
+    func editSeatName(seat: Seat, newName: String) {
+        if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            currentGame.seats[idx].player.editName(newName: newName)
+            saveState()
+        }
+    }
+    
+    func updatePlayerNote(seat: Seat, note: String) {
+        if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            currentGame.seats[idx].player.updateNote(newNote: note)
+            saveState()
+        }
+    }
+    
+    // MARK: - Private Repo Caller
+    
     func saveState() {
-        do {
-            // Encode the current state object to JSON Data
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            
-            let data = try encoder.encode(sides)
-            let stateUrl = saveURL.appendingPathComponent(saveFileName)
-            try data.write(to: stateUrl, options: [.atomicWrite])
-            print("Game state saved successfully to \(stateUrl.path)")
-            
-            let characterData = try encoder.encode(inGameCharacters)
-            let characterUrl = saveURL.appendingPathComponent(characterSaveFileName)
-            try characterData.write(to: characterUrl, options: [.atomicWrite])
-            print("Game state saved successfully to \(characterUrl.path)")
-        } catch {
-            print("Failed to save game state: \(error.localizedDescription)")
-        }
+        repo.saveCurrentGame(currentGame: currentGame)
     }
     
-    func resetState() {
-        do {
-            let stateUrl = saveURL.appendingPathComponent(saveFileName)
-            let characterUrl = saveURL.appendingPathComponent(characterSaveFileName)
-            
-            try FileManager.default.removeItem(at: stateUrl)
-            try FileManager.default.removeItem(at: characterUrl)
-        } catch {
-            print("Failed to clean up state: \(error.localizedDescription)")
-        }
-        
-        
+    func refreshPastGames() {
+        repo.loadPastGames()
+        pastGames = repo.pastGames
     }
     
-    func loadState() {
-        let stateUrl = saveURL.appendingPathComponent(saveFileName)
-        guard FileManager.default.fileExists(atPath: stateUrl.path) else {
-            print("No saved state file found. Starting new game.")
-            return
-        }
-        
-        do {
-            // Read the file data
-            let data = try Data(contentsOf: stateUrl)
-            
-            // Decode the JSON Data back into the GameState struct
-            let decoder = JSONDecoder()
-            
-            sides = try decoder.decode([BoardSide: Side].self, from: data)
-            print("Game state loaded successfully.")
-        } catch {
-            print("Failed to load game state: \(error.localizedDescription)")
-            return
-        }
-    }
-    
-    func loadCharacters() {
-        let characterUrl = saveURL.appendingPathComponent(characterSaveFileName)
-        guard FileManager.default.fileExists(atPath: characterUrl.path) else {
-            print("No saved state file found. Starting new game.")
-            return
-        }
-        
-        do {
-            // Read the file data
-            let data = try Data(contentsOf: characterUrl)
-            
-            // Decode the JSON Data back into the GameState struct
-            let decoder = JSONDecoder()
-            
-            inGameCharacters = try decoder.decode([Character].self, from: data)
-            print("Game state loaded successfully.")
-        } catch {
-            print("Failed to load game state: \(error.localizedDescription)")
-            return
-        }
+    func removePastGames(atOffsets offsets: IndexSet) {
+        repo.removePastGames(atOffsets: offsets)
+        pastGames = repo.pastGames
     }
 }

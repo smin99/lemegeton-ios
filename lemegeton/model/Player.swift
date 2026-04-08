@@ -34,4 +34,13 @@ struct Player: Codable, Identifiable {
     mutating func updateNote(newNote: String) {
         note = newNote
     }
+    
+    mutating func clearRoleAndState() {
+        character = nil
+        possibleCharacters.removeAll()
+        isCharacterConfirmed = false
+        isDrunk = false
+        isDead = false
+        note = ""
+    }
 }

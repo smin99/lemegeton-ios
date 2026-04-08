@@ -8,7 +8,19 @@
 import Foundation
 
 struct CharacterService {
-    static let availableCharacters: [Character] = load([Character].self, fileName: "characters")
+    static let isSpecialHalloweenEnabled = false
+    
+    static let availableCharacters: [Character] = {
+        let baseCharacters = load([Character].self, fileName: "characters")
+        
+        guard isSpecialHalloweenEnabled else {
+            return baseCharacters
+        }
+        
+        let specialHalloweenCharacters = load([Character].self, fileName: "special_halloween_characters")
+        return baseCharacters + specialHalloweenCharacters
+    }()
+    
     static let scenarios: [Scenario] = load([ScenarioTemplate].self, fileName: "scenario").map { toScenario(template: $0) }
     
     private static func load<T: Decodable>(_ type: T.Type, fileName: String) -> T {
