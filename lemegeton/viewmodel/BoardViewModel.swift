@@ -54,6 +54,9 @@ class BoardViewModel: ObservableObject {
     
     func updateSetup() {
         currentGame.gameState = currentGame.gameState == .set_up ? .in_game : .set_up
+        if currentGame.gameState == .in_game {
+            currentGame.startChronicleIfNeeded()
+        }
         repo.saveCurrentGame(currentGame: currentGame)
     }
     
@@ -105,6 +108,9 @@ class BoardViewModel: ObservableObject {
     func deathUpon(seat: Seat) {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
             currentGame.seats[idx].player.isDead = !currentGame.seats[idx].player.isDead
+            let playerName = currentGame.seats[idx].player.name.isEmpty ? "Unnamed player" : currentGame.seats[idx].player.name
+            let event = currentGame.seats[idx].player.isDead ? "\(playerName) died." : "\(playerName) was revived."
+            currentGame.appendCurrentPhaseEvent(event)
             saveState()
         }
     }
@@ -121,6 +127,38 @@ class BoardViewModel: ObservableObject {
             currentGame.seats[idx].player.updateNote(newNote: note)
             saveState()
         }
+    }
+
+    func updateClaimedRole(seat: Seat, character: Character?) {
+        guard let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) else {
+            return
+        }
+
+        let playerName = currentGame.seats[idx].player.name.isEmpty ? "Unnamed player" : currentGame.seats[idx].player.name
+        let previousClaim = currentGame.seats[idx].player.character
+
+        currentGame.seats[idx].player.character = character
+        currentGame.seats[idx].player.possibleCharacters = character.map { [$0] } ?? []
+
+        if let character {
+            if let previousClaim, previousClaim.id != character.id {
+                currentGame.appendCurrentPhaseEvent("\(playerName) changed their claimed role from \(previousClaim.name) to \(character.name).")
+            } else if previousClaim == nil {
+                currentGame.appendCurrentPhaseEvent("\(playerName) claimed \(character.name).")
+            }
+        }
+
+        saveState()
+    }
+
+    func updateCurrentPhaseNote(_ note: String) {
+        currentGame.updateCurrentPhaseNote(note)
+        saveState()
+    }
+
+    func advancePhase() {
+        currentGame.advancePhase()
+        saveState()
     }
     
     // MARK: - Private Repo Caller

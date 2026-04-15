@@ -23,6 +23,7 @@ struct CharacterListView: View {
     let onComplete: (Set<Character>) -> Void
     let allCharacters: [Character]
     let includeScenario: Bool
+    let maxSelectionCount: Int?
     @State var selectedCharacters: Set<Character>
     
     // Define the grid columns
@@ -86,7 +87,15 @@ struct CharacterListView: View {
                         if (isInGame) {
                             selectedCharacters.remove(character)
                         } else {
-                            selectedCharacters.insert(character)
+                            if let maxSelectionCount {
+                                if maxSelectionCount == 1 {
+                                    selectedCharacters = [character]
+                                } else if selectedCharacters.count < maxSelectionCount {
+                                    selectedCharacters.insert(character)
+                                }
+                            } else {
+                                selectedCharacters.insert(character)
+                            }
                         }
                     }
                     .padding()

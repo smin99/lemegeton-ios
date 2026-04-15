@@ -8,12 +8,22 @@
 import SwiftUI
 
 struct NoteTakeView: View {
+    let title: String
     let onComplete: (String) -> Void
+    let buttonTitle: String
     @State var note: String = ""
     @FocusState private var keyboardFocused: Bool
     
     var body : some View {
         VStack {
+            HStack {
+                Text(title)
+                    .grimoireBoldStyle(size: 20)
+                    .foregroundStyle(.themeOnSurface)
+                Spacer()
+            }
+            .padding(.horizontal)
+
             TextEditor(text: $note)
                 .foregroundStyle(.themeOnSurface)
                 .padding()
@@ -26,7 +36,7 @@ struct NoteTakeView: View {
                 Button {
                     onComplete(note)
                 } label: {
-                    Text("완료")
+                    Text(buttonTitle)
                 }
                 .padding()
             }

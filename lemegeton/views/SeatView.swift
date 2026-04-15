@@ -35,7 +35,7 @@ struct SeatView: View {
                             Label("Write Note", systemImage: "note.text")
                         }
                         Button(action: {
-                            seat.player.isDead.toggle()
+                            boardVM.deathUpon(seat: seat)
                         }) {
                             Label(
                                 seat.player.isDead ? "Revive!" : "Dead",
@@ -80,10 +80,12 @@ struct SeatView: View {
                     }
                     .sheet(isPresented: $showNoteEditor) {
                         NoteTakeView(
+                            title: "\(seat.player.name)'s Note",
                             onComplete: { note in
                                 boardVM.updatePlayerNote(seat: seat, note: note)
                                 showNoteEditor = false
                             },
+                            buttonTitle: "Done",
                             note: seat.player.note
                         )
                     }
@@ -91,13 +93,10 @@ struct SeatView: View {
                         CharacterListView(
                             titleText: "Guess \(seat.player.name)'s role",
                             onComplete: { characters in
-                                let array = Array(characters)
-                                if array.count == 1 {
-                                    seat.player.character = array[0]
-                                } else {
-                                    seat.player.character = nil
-                                }
-                                seat.player.possibleCharacters = array
+                                boardVM.updateClaimedRole(
+                                    seat: seat,
+                                    character: Array(characters).first
+                                )
                                 showCharacterList = false
                             },
                             allCharacters: boardVM.currentGame.inGameCharacters
@@ -109,8 +108,9 @@ struct SeatView: View {
                                     }
                                 }),
                             includeScenario: false,
+                            maxSelectionCount: 1,
                             selectedCharacters: Set(
-                                seat.player.possibleCharacters
+                                seat.player.character.map { [$0] } ?? []
                             )
                         )
                     }

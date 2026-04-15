@@ -9,6 +9,34 @@ import Foundation
 
 struct Game: Codable {
     static let FINAL_ALIVE_CHARACTER = 2
+
+    enum TurnPhase: Equatable {
+        case firstNight
+        case day(Int)
+        case night(Int)
+
+        var title: String {
+            switch self {
+            case .firstNight:
+                return "First Night"
+            case .day(let number):
+                return "Day \(number)"
+            case .night(let number):
+                return "Night \(number)"
+            }
+        }
+
+        var nextTitle: String {
+            switch self {
+            case .firstNight:
+                return "Day 1"
+            case .day(let number):
+                return "Night \(number + 1)"
+            case .night(let number):
+                return "Day \(number)"
+            }
+        }
+    }
     
     enum GameState: Codable {
         case set_up, in_game, game_over
@@ -68,5 +96,90 @@ struct Game: Codable {
         inGameNote.removeAll()
         gameState = .set_up
         inGameCharacters.removeAll()
+    }
+
+    var currentPhase: TurnPhase? {
+        guard !inGameNote.isEmpty else { return nil }
+
+        if inGameNote.count == 1 {
+            return .firstNight
+        }
+
+        if inGameNote.count.isMultiple(of: 2) {
+            return .day(numOfDay)
+        }
+
+        return .night(numOfDay + 1)
+    }
+
+    var currentPhaseTitle: String {
+        currentPhase?.title ?? "Setup"
+    }
+
+    var nextPhaseTitle: String {
+        currentPhase?.nextTitle ?? "First Night"
+    }
+
+    mutating func startChronicleIfNeeded() {
+        guard inGameNote.isEmpty else { return }
+        numOfDay = 0
+        inGameNote = [""]
+    }
+
+    mutating func advancePhase() {
+        switch currentPhase {
+        case .none:
+            startChronicleIfNeeded()
+        case .firstNight:
+            numOfDay = 1
+            inGameNote.append("")
+        case .day:
+            inGameNote.append("")
+        case .night:
+            numOfDay += 1
+            inGameNote.append("")
+        }
+    }
+
+    mutating func updateCurrentPhaseNote(_ note: String) {
+        if inGameNote.isEmpty {
+            startChronicleIfNeeded()
+        }
+
+        guard let index = inGameNote.indices.last else { return }
+        inGameNote[index] = note
+    }
+
+    mutating func appendCurrentPhaseEvent(_ event: String) {
+        if inGameNote.isEmpty {
+            startChronicleIfNeeded()
+        }
+
+        guard let index = inGameNote.indices.last else { return }
+        let trimmedNote = inGameNote[index].trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmedNote.isEmpty {
+            inGameNote[index] = event
+        } else {
+            inGameNote[index] += "\n\(event)"
+        }
+    }
+
+    func currentPhaseNote() -> String {
+        inGameNote.last ?? ""
+    }
+
+    func phaseTimeline() -> [(title: String, note: String)] {
+        inGameNote.enumerated().map { index, note in
+            if index == 0 {
+                return ("First Night", note)
+            }
+
+            if (index + 1).isMultiple(of: 2) {
+                return ("Day \(index / 2 + 1)", note)
+            }
+
+            return ("Night \(index / 2 + 2)", note)
+        }
     }
 }

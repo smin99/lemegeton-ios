@@ -130,6 +130,28 @@ private struct PastGameDetailView: View {
                     ReadOnlyBoardView(game: game)
                         .frame(height: 420)
                 }
+
+                if !game.inGameNote.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Chronicle")
+                            .grimoireBoldStyle(size: 22)
+
+                        ForEach(Array(game.phaseTimeline().enumerated()), id: \.offset) { _, entry in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(entry.title)
+                                    .grimoireBoldStyle(size: 18)
+
+                                Text(entry.note.isEmpty ? "No note recorded." : entry.note)
+                                    .grimoireStyle(size: 15, italic: false)
+                                    .foregroundStyle(.themePrimary.opacity(0.88))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(Color(.themeSurface).opacity(0.92))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                        }
+                    }
+                }
             }
             .padding()
         }
@@ -250,4 +272,3 @@ private struct ReadOnlySeatView: View {
         .frame(width: seatSize, height: seatSize + 28)
     }
 }
-

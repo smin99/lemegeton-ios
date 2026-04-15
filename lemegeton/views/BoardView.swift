@@ -48,11 +48,53 @@ struct BoardView: View {
     
     @State private var showMenu = false
     @State private var showCharacterSheet: Bool = false
+    @State private var showPhaseNoteSheet: Bool = false
+    @State private var showChronicle = false
+    @State private var isChronicleSummaryExpanded = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack(alignment: .topLeading) {
                 SeatsCanvas(boardVM: boardVM)
+
+                if boardVM.currentGame.gameState != .set_up {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isChronicleSummaryExpanded.toggle()
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(boardVM.currentGame.currentPhaseTitle)
+                                    .grimoireBoldStyle(size: 20)
+                                    .foregroundStyle(.themeOnSurface)
+
+                                Spacer()
+
+                                Image(systemName: isChronicleSummaryExpanded ? "chevron.up" : "chevron.down")
+                                    .foregroundStyle(.themePrimary)
+                            }
+
+                            if isChronicleSummaryExpanded {
+                                Text(boardVM.currentGame.currentPhaseNote().isEmpty ? "No chronicle note yet." : boardVM.currentGame.currentPhaseNote())
+                                    .grimoireStyle(size: 14, italic: false)
+                                    .foregroundStyle(.themePrimary.opacity(0.9))
+                                    .multilineTextAlignment(.leading)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.themeSurface.opacity(0.94))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(Color.themePrimary.opacity(0.15), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .padding(.top, 16)
+                    .padding(.horizontal, 16)
+                }
                 
                 // The Custom "Menu" (Dropdown)
                 if showMenu {
@@ -65,6 +107,16 @@ struct BoardView: View {
                             }
                             .buttonStyle(GrimoireButtonStyle())
                             
+                            Divider()
+                                .background(Color(.themeTertiary))
+
+                            NavigationLink {
+                                PastGamesView(boardVM: boardVM)
+                            } label: {
+                                Label("Previous Games", systemImage: "clock.arrow.circlepath")
+                            }
+                            .buttonStyle(GrimoireButtonStyle())
+
                             Divider()
                                 .background(Color(.themeTertiary))
                             
@@ -91,6 +143,16 @@ struct BoardView: View {
                             .buttonStyle(GrimoireButtonStyle(isDestructive: true))
                             
                         } else {
+                            Button {
+                                showPhaseNoteSheet = true
+                            } label: {
+                                Label(boardVM.currentGame.currentPhaseTitle, systemImage: "book.closed")
+                            }
+                            .buttonStyle(GrimoireButtonStyle())
+
+                            Divider()
+                                .background(Color(.themeTertiary))
+
                             // Finish the game
                             Button {
                                 activeAlert = boardVM.canEndGame() ? .completeGame : .cannotEndGame
@@ -102,6 +164,16 @@ struct BoardView: View {
                             Divider()
                                 .background(Color(.themeTertiary))
                             
+                            NavigationLink {
+                                PastGamesView(boardVM: boardVM)
+                            } label: {
+                                Label("Previous Games", systemImage: "clock.arrow.circlepath")
+                            }
+                            .buttonStyle(GrimoireButtonStyle())
+
+                            Divider()
+                                .background(Color(.themeTertiary))
+
                             // Move back to set up state
                             Button {
                                 boardVM.updateSetup()
@@ -132,12 +204,26 @@ struct BoardView: View {
                 CharacterListView(titleText: "Add characters in game", onComplete: { characters in
                     boardVM.setUpCharacters(characters: Array(characters).sorted(by: { $0.type.rawValue < $1.type.rawValue }))
                     showCharacterSheet = false
-                }, allCharacters: boardVM.allCharacters, includeScenario: true, selectedCharacters: Set(boardVM.currentGame.inGameCharacters))
+                }, allCharacters: boardVM.allCharacters, includeScenario: true, maxSelectionCount: nil, selectedCharacters: Set(boardVM.currentGame.inGameCharacters))
+            }
+            .sheet(isPresented: $showPhaseNoteSheet) {
+                NoteTakeView(
+                    title: boardVM.currentGame.currentPhaseTitle,
+                    onComplete: { note in
+                        boardVM.updateCurrentPhaseNote(note)
+                        showPhaseNoteSheet = false
+                    },
+                    buttonTitle: "Save Note",
+                    note: boardVM.currentGame.currentPhaseNote()
+                )
+            }
+            .navigationDestination(isPresented: $showChronicle) {
+                ChronicleView(boardVM: boardVM)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text(boardVM.currentGame.gameState == .set_up ? "Set up the Grimoire" : "Town Square: \(boardVM.currentGame.numAliveCharacters()) Alive")
+                    Text(boardVM.currentGame.gameState == .set_up ? "Set up the Grimoire" : "\(boardVM.currentGame.numAliveCharacters()) Alive")
                         .grimoireBoldStyle(size: 18)
                         .tracking(2)
                 }
@@ -155,11 +241,25 @@ struct BoardView: View {
                 .sharedBackgroundVisibility(.hidden)
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        PastGamesView(boardVM: boardVM)
-                    } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .foregroundColor(.themePrimary)
+                    if boardVM.currentGame.gameState != .set_up {
+                        Button {
+                            showChronicle = true
+                        } label: {
+                            Image(systemName: "book.pages")
+                                .foregroundColor(.themePrimary)
+                        }
+                    }
+                }
+                .sharedBackgroundVisibility(.hidden)
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    if boardVM.currentGame.gameState != .set_up {
+                        Button {
+                            boardVM.advancePhase()
+                        } label: {
+                            Image(systemName: "moonphase.waning.crescent")
+                                .foregroundColor(.themePrimary)
+                        }
                     }
                 }
                 .sharedBackgroundVisibility(.hidden)
