@@ -74,7 +74,9 @@ class BoardViewModel: ObservableObject {
     
     func canEndGame() -> Bool {
         return currentGame.isAllCharacterConfirmed() &&
-        (currentGame.didAllDemonDie() || currentGame.numAliveCharacters() < Game.FINAL_ALIVE_CHARACTER)
+        (currentGame.didAllDemonDie()
+         || currentGame.numAliveCharacters() < Game.FINAL_ALIVE_CHARACTER
+         || currentGame.isOnlyEvilAlive())
     }
     
     func endGame(resetGame: Bool) {
@@ -139,6 +141,7 @@ class BoardViewModel: ObservableObject {
 
         currentGame.seats[idx].player.character = character
         currentGame.seats[idx].player.possibleCharacters = character.map { [$0] } ?? []
+        currentGame.seats[idx].player.activeAbilityTargetSeatID = nil
 
         if let character {
             if let previousClaim, previousClaim.id != character.id {
@@ -149,6 +152,47 @@ class BoardViewModel: ObservableObject {
         }
 
         saveState()
+    }
+
+    func updateAbilityTarget(for seat: Seat, targetSeat: Seat?) {
+        guard let sourceIndex = currentGame.seats.firstIndex(where: { $0.id == seat.id }),
+              let character = currentGame.seats[sourceIndex].player.character,
+              let ability = character.supportedAbility else {
+            return
+        }
+
+        currentGame.seats[sourceIndex].player.activeAbilityTargetSeatID = targetSeat?.id
+
+        switch ability {
+        case .monkProtect:
+            if let targetSeat {
+                let sourceName = currentGame.seats[sourceIndex].player.name.isEmpty ? "Unnamed player" : currentGame.seats[sourceIndex].player.name
+                let targetName = targetSeat.player.name.isEmpty ? "Unnamed player" : targetSeat.player.name
+                currentGame.appendCurrentPhaseEvent("\(sourceName), the claimed Monk has said to protect \(targetName).")
+            }
+        default:
+            break
+        }
+
+        saveState()
+    }
+
+    func recordClaimedAbility(seat: Seat, summary: String) {
+        guard currentGame.seats.contains(where: { $0.id == seat.id }) else {
+            return
+        }
+
+        currentGame.appendCurrentPhaseEvent(summary)
+        saveState()
+    }
+
+    func activeAbilityTarget(for seat: Seat) -> Seat? {
+        guard let sourceIndex = currentGame.seats.firstIndex(where: { $0.id == seat.id }),
+              let targetID = currentGame.seats[sourceIndex].player.activeAbilityTargetSeatID else {
+            return nil
+        }
+
+        return currentGame.seats.first(where: { $0.id == targetID })
     }
 
     func updateCurrentPhaseNote(_ note: String) {

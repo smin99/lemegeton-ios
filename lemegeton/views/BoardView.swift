@@ -54,145 +54,150 @@ struct BoardView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .topLeading) {
-                SeatsCanvas(boardVM: boardVM)
-
-                if boardVM.currentGame.gameState != .set_up {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isChronicleSummaryExpanded.toggle()
-                        }
-                    } label: {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(boardVM.currentGame.currentPhaseTitle)
-                                    .grimoireBoldStyle(size: 20)
-                                    .foregroundStyle(.themeOnSurface)
-
-                                Spacer()
-
-                                Image(systemName: isChronicleSummaryExpanded ? "chevron.up" : "chevron.down")
-                                    .foregroundStyle(.themePrimary)
-                            }
-
-                            if isChronicleSummaryExpanded {
-                                Text(boardVM.currentGame.currentPhaseNote().isEmpty ? "No chronicle note yet." : boardVM.currentGame.currentPhaseNote())
-                                    .grimoireStyle(size: 14, italic: false)
-                                    .foregroundStyle(.themePrimary.opacity(0.9))
-                                    .multilineTextAlignment(.leading)
-                            }
-                        }
+            GeometryReader { proxy in
+                ZStack(alignment: .topLeading) {
+                    ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                        SeatsCanvas(boardVM: boardVM)
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
-                    .buttonStyle(.plain)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.themeSurface.opacity(0.94))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(Color.themePrimary.opacity(0.15), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                    .padding(.top, 16)
-                    .padding(.horizontal, 16)
-                }
-                
-                // The Custom "Menu" (Dropdown)
-                if showMenu {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if (boardVM.currentGame.gameState == .set_up) {
-                            Button() {
-                                self.showCharacterSheet = true
-                            } label: {
-                                Label("Scenario & Roles", systemImage: "theatermasks")
-                            }
-                            .buttonStyle(GrimoireButtonStyle())
-                            
-                            Divider()
-                                .background(Color(.themeTertiary))
 
-                            NavigationLink {
-                                PastGamesView(boardVM: boardVM)
-                            } label: {
-                                Label("Previous Games", systemImage: "clock.arrow.circlepath")
+                    if boardVM.currentGame.gameState != .set_up {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isChronicleSummaryExpanded.toggle()
                             }
-                            .buttonStyle(GrimoireButtonStyle())
-
-                            Divider()
-                                .background(Color(.themeTertiary))
-                            
-                            Button(role: .confirm) {
-                                if boardVM.canStartGame() {
-                                    boardVM.updateSetup()
-                                } else {
-                                    activeAlert = .cannotStartGame
+                        } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(boardVM.currentGame.currentPhaseTitle)
+                                        .grimoireBoldStyle(size: 20)
+                                        .foregroundStyle(.themeOnSurface)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: isChronicleSummaryExpanded ? "chevron.up" : "chevron.down")
+                                        .foregroundStyle(.themePrimary)
                                 }
-                            } label: {
-                                Label("Begin Chronicle", systemImage: "play.circle.fill")
+                                
+                                if isChronicleSummaryExpanded {
+                                    Text(boardVM.currentGame.currentPhaseNote().isEmpty ? "No chronicle note yet." : boardVM.currentGame.currentPhaseNote())
+                                        .grimoireStyle(size: 14, italic: false)
+                                        .foregroundStyle(.themePrimary.opacity(0.9))
+                                        .multilineTextAlignment(.leading)
+                                }
                             }
-                            .buttonStyle(GrimoireButtonStyle())
-                            
-                            Divider()
-                                .background(Color(.themeTertiary))
-                            
-                            // Reset the board
-                            Button(role: .destructive) {
-                                activeAlert = .resetBoard
-                            } label: {
-                                Label("Clear Grimoire", systemImage: "arrow.uturn.backward.circle")
-                            }
-                            .buttonStyle(GrimoireButtonStyle(isDestructive: true))
-                            
-                        } else {
-                            Button {
-                                showPhaseNoteSheet = true
-                            } label: {
-                                Label(boardVM.currentGame.currentPhaseTitle, systemImage: "book.closed")
-                            }
-                            .buttonStyle(GrimoireButtonStyle())
-
-                            Divider()
-                                .background(Color(.themeTertiary))
-
-                            // Finish the game
-                            Button {
-                                activeAlert = boardVM.canEndGame() ? .completeGame : .cannotEndGame
-                            } label: {
-                                Label("Final Verdict", systemImage: "flag.checkered")
-                            }
-                            .buttonStyle(GrimoireButtonStyle())
-                            
-                            Divider()
-                                .background(Color(.themeTertiary))
-                            
-                            NavigationLink {
-                                PastGamesView(boardVM: boardVM)
-                            } label: {
-                                Label("Previous Games", systemImage: "clock.arrow.circlepath")
-                            }
-                            .buttonStyle(GrimoireButtonStyle())
-
-                            Divider()
-                                .background(Color(.themeTertiary))
-
-                            // Move back to set up state
-                            Button {
-                                boardVM.updateSetup()
-                            } label: {
-                                Label("Arrange Seating", systemImage: "slider.horizontal.3")
-                            }
-                            .buttonStyle(GrimoireButtonStyle())
                         }
+                        .buttonStyle(.plain)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.themeSurface.opacity(0.94))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(Color.themePrimary.opacity(0.15), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .padding(.top, 16)
+                        .padding(.horizontal, 16)
                     }
-                    .padding()
-                    .background(.themeSurface)
-                    .cornerRadius(16)
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1)))
-                    .frame(width: 250)
-                    .transition(.scale(scale: 0.9, anchor: .topLeading).combined(with: .opacity))
-                    .zIndex(1) // Ensure it stays on top
+                    
+                    // The Custom "Menu" (Dropdown)
+                    if showMenu {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if (boardVM.currentGame.gameState == .set_up) {
+                                Button() {
+                                    self.showCharacterSheet = true
+                                } label: {
+                                    Label("Scenario & Roles", systemImage: "theatermasks")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                                
+                                Divider()
+                                    .background(Color(.themeTertiary))
+                                
+                                NavigationLink {
+                                    PastGamesView(boardVM: boardVM)
+                                } label: {
+                                    Label("Previous Games", systemImage: "clock.arrow.circlepath")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                                
+                                Divider()
+                                    .background(Color(.themeTertiary))
+                                
+                                Button(role: .confirm) {
+                                    if boardVM.canStartGame() {
+                                        boardVM.updateSetup()
+                                    } else {
+                                        activeAlert = .cannotStartGame
+                                    }
+                                } label: {
+                                    Label("Begin Chronicle", systemImage: "play.circle.fill")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                                
+                                Divider()
+                                    .background(Color(.themeTertiary))
+                                
+                                // Reset the board
+                                Button(role: .destructive) {
+                                    activeAlert = .resetBoard
+                                } label: {
+                                    Label("Clear Grimoire", systemImage: "arrow.uturn.backward.circle")
+                                }
+                                .buttonStyle(GrimoireButtonStyle(isDestructive: true))
+                                
+                            } else {
+                                Button {
+                                    showPhaseNoteSheet = true
+                                } label: {
+                                    Label(boardVM.currentGame.currentPhaseTitle, systemImage: "book.closed")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                                
+                                Divider()
+                                    .background(Color(.themeTertiary))
+                                
+                                // Finish the game
+                                Button {
+                                    activeAlert = boardVM.canEndGame() ? .completeGame : .cannotEndGame
+                                } label: {
+                                    Label("Final Verdict", systemImage: "flag.checkered")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                                
+                                Divider()
+                                    .background(Color(.themeTertiary))
+                                
+                                NavigationLink {
+                                    PastGamesView(boardVM: boardVM)
+                                } label: {
+                                    Label("Previous Games", systemImage: "clock.arrow.circlepath")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                                
+                                Divider()
+                                    .background(Color(.themeTertiary))
+                                
+                                // Move back to set up state
+                                Button {
+                                    boardVM.updateSetup()
+                                } label: {
+                                    Label("Arrange Seating", systemImage: "slider.horizontal.3")
+                                }
+                                .buttonStyle(GrimoireButtonStyle())
+                            }
+                        }
+                        .padding()
+                        .background(.themeSurface)
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1)))
+                        .frame(width: 250)
+                        .transition(.scale(scale: 0.9, anchor: .topLeading).combined(with: .opacity))
+                        .zIndex(1) // Ensure it stays on top
+                    }
                 }
             }
-            .ignoresSafeArea(.keyboard)
             .onTapGesture {
                 if showMenu {
                     withAnimation {
@@ -214,6 +219,7 @@ struct BoardView: View {
                         showPhaseNoteSheet = false
                     },
                     buttonTitle: "Save Note",
+                    placeholder: "Write what happened during this phase",
                     note: boardVM.currentGame.currentPhaseNote()
                 )
             }

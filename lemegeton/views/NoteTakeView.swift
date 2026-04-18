@@ -11,6 +11,7 @@ struct NoteTakeView: View {
     let title: String
     let onComplete: (String) -> Void
     let buttonTitle: String
+    let placeholder: String
     @State var note: String = ""
     @FocusState private var keyboardFocused: Bool
     
@@ -30,6 +31,15 @@ struct NoteTakeView: View {
                 .focused($keyboardFocused)
                 .scrollContentBackground(.hidden)
                 .background(.clear)
+                .overlay(alignment: .topLeading) {
+                    if note.isEmpty {
+                        Text(placeholder)
+                            .foregroundStyle(.themePrimary.opacity(0.45))
+                            .padding(.horizontal, 22)
+                            .padding(.top, 24)
+                            .allowsHitTesting(false)
+                    }
+                }
             
             HStack {
                 Spacer()

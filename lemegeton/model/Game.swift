@@ -82,7 +82,17 @@ struct Game: Codable {
     }
     
     func didEvilWin() -> Bool {
-        return numAliveCharacters() < Game.FINAL_ALIVE_CHARACTER && !didAllDemonDie()
+        return (numAliveCharacters() < Game.FINAL_ALIVE_CHARACTER || isOnlyEvilAlive()) && !didAllDemonDie()
+    }
+
+    func isOnlyEvilAlive() -> Bool {
+        let alivePlayers = seats.map(\.player).filter { !$0.isDead }
+        guard !alivePlayers.isEmpty else { return false }
+
+        return alivePlayers.allSatisfy {
+            guard let character = $0.character else { return false }
+            return character.type == .minion || character.type == .demon
+        }
     }
     
     mutating func clearGameState() {

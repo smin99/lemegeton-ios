@@ -16,6 +16,7 @@ struct Player: Codable, Identifiable {
     var isCharacterConfirmed: Bool
     var isDrunk: Bool   // 취하거나 중독 상태인지
     var isDead: Bool
+    var activeAbilityTargetSeatID: UUID?
     var note: String    // 
     
     init(name: String, inGameCharacters: [Character]) {
@@ -24,6 +25,7 @@ struct Player: Codable, Identifiable {
         self.isCharacterConfirmed = false
         self.isDrunk = false
         self.isDead = false
+        self.activeAbilityTargetSeatID = nil
         self.note = ""
     }
     
@@ -41,6 +43,7 @@ struct Player: Codable, Identifiable {
         isCharacterConfirmed = false
         isDrunk = false
         isDead = false
+        activeAbilityTargetSeatID = nil
         note = ""
     }
 }

@@ -16,23 +16,32 @@ struct SeatView: View {
     @State private var showNoteEditor = false
     @State private var showCharacterList = false
     @State private var showEditNameSheet = false
+    @State private var activeAbilitySheet: SupportedAbility?
     
     var body: some View {
         if boardVM.currentGame.gameState == .set_up {
-            SetupSeatView(seat: $seat)
+            SetupSeatView(seat: $seat, boardVM: boardVM)
         } else {
             VStack {
                 ZStack {
                     Menu {
                         Button(action: {
-                            showEditNameSheet = true
+                            showCharacterList = true
                         }) {
-                            Label("Edit Name", systemImage: "pencil.line")
+                            Label(
+                                "Claimed Role",
+                                systemImage: "person.fill.questionmark"
+                            )
                         }
-                        Button(action: {
-                            showNoteEditor = true
-                        }) {
-                            Label("Write Note", systemImage: "note.text")
+                        if let ability = seat.player.character?.supportedAbility {
+                            Button(action: {
+                                activeAbilitySheet = ability
+                            }) {
+                                Label(
+                                    abilityMenuTitle(for: ability),
+                                    systemImage: abilitySystemImage(for: ability)
+                                )
+                            }
                         }
                         Button(action: {
                             boardVM.deathUpon(seat: seat)
@@ -45,17 +54,14 @@ struct SeatView: View {
                             )
                         }
                         Button(action: {
-                            showCharacterList = true
+                            showEditNameSheet = true
                         }) {
-                            Label(
-                                "Claimed Role",
-                                systemImage: "person.fill.questionmark"
-                            )
+                            Label("Edit Name", systemImage: "pencil.line")
                         }
                         Button(action: {
-                            boardVM.removeSeat(seat: seat)
+                            showNoteEditor = true
                         }) {
-                            Label("Remove Seat", systemImage: "trash.fill")
+                            Label("Write Note", systemImage: "note.text")
                         }
                     } label: {
                         CircleImageView(
@@ -86,6 +92,7 @@ struct SeatView: View {
                                 showNoteEditor = false
                             },
                             buttonTitle: "Done",
+                            placeholder: "Write a private note",
                             note: seat.player.note
                         )
                     }
@@ -114,6 +121,19 @@ struct SeatView: View {
                             )
                         )
                     }
+                    .sheet(item: $activeAbilitySheet) { ability in
+                        AbilityActionSheet(
+                            ability: ability,
+                            sourceSeat: seat,
+                            seats: availableTargets(for: ability),
+                            characters: availableCharacters(for: ability),
+                            selectedSeatIDs: ability == .monkProtect ? boardVM.activeAbilityTarget(for: seat).map { [$0.id] } ?? [] : [],
+                            onSubmit: { selection in
+                                handleAbilitySelection(ability, selection: selection)
+                                activeAbilitySheet = nil
+                            }
+                        )
+                    }
                 }
                 
                 HStack {
@@ -138,16 +158,110 @@ struct SeatView: View {
             .position(x: seat.x, y: seat.y)
         }
     }
+
+    private func abilityMenuTitle(for ability: SupportedAbility) -> String {
+        switch ability {
+        case .monkProtect:
+            if let target = boardVM.activeAbilityTarget(for: seat) {
+                let targetName = target.player.name.isEmpty ? "Unnamed player" : target.player.name
+                return "Protected: \(targetName)"
+            }
+            return "Protected"
+        default:
+            return ability.menuTitle
+        }
+    }
+
+    private func abilitySystemImage(for ability: SupportedAbility) -> String {
+        switch ability {
+        case .monkProtect:
+            return "shield.lefthalf.filled"
+        default:
+            return ability.defaultSystemImage
+        }
+    }
+
+    private func availableTargets(for ability: SupportedAbility) -> [Seat] {
+        switch ability.input {
+        case let .players(_, _, excludeSelf, aliveOnly, deadOnly),
+                let .playerAndCharacter(excludeSelf, aliveOnly, deadOnly, _),
+                let .playersAndCharacter(_, excludeSelf, aliveOnly, deadOnly, _),
+                let .playerAndTwoCharacters(excludeSelf, aliveOnly, deadOnly, _, _),
+                let .multiplePlayerAndCharacter(_, excludeSelf, aliveOnly, deadOnly, _):
+            return boardVM.currentGame.seats.filter { targetSeat in
+                if excludeSelf && targetSeat.id == seat.id {
+                    return false
+                }
+                if aliveOnly && targetSeat.player.isDead {
+                    return false
+                }
+                if deadOnly && !targetSeat.player.isDead {
+                    return false
+                }
+                return true
+            }
+        case .text, .character:
+            return []
+        }
+    }
+
+    private func availableCharacters(for ability: SupportedAbility) -> [Character] {
+        let sortedCharacters = boardVM.currentGame.inGameCharacters.sorted(by: {
+            if $0.type < $1.type {
+                return true
+            }
+            return $0.id < $1.id
+        })
+
+        switch ability.input {
+        case let .playerAndCharacter(_, _, _, characterScope),
+             let .playersAndCharacter(_, _, _, _, characterScope),
+             let .multiplePlayerAndCharacter(_, _, _, _, characterScope),
+             let .character(characterScope):
+            return sortedCharacters.filter(characterScope.includes(_:))
+        case let .playerAndTwoCharacters(_, _, _, firstCharacterScope, secondCharacterScope):
+            return sortedCharacters.filter { firstCharacterScope.includes($0) || secondCharacterScope.includes($0) }
+        case .text, .players:
+            return sortedCharacters
+        }
+    }
+
+    private func handleAbilitySelection(_ ability: SupportedAbility, selection: AbilitySelection) {
+        if ability == .monkProtect, case let .players(seats) = selection {
+            boardVM.updateAbilityTarget(for: seat, targetSeat: seats.first)
+            return
+        }
+
+        let actorName = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Unnamed player" : seat.player.name
+        guard let summary = ability.chronicleSummary(actorName: actorName, selection: selection) else {
+            return
+        }
+
+        boardVM.recordClaimedAbility(seat: seat, summary: summary)
+    }
 }
 
 private struct SetupSeatView: View {
     @Binding var seat: Seat
+    @StateObject var boardVM: BoardViewModel
     
     @State private var dragOffset: CGSize = .zero
     
     var body: some View {
         VStack {
-            CircleImageView(character: $seat.player.character, isDead: $seat.player.isDead)
+            ZStack(alignment: .topTrailing) {
+                CircleImageView(character: $seat.player.character, isDead: $seat.player.isDead)
+
+                Button {
+                    boardVM.removeSeat(seat: seat)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.themePrimary, Color(.themeSurface))
+                        .background(Color(.themeSurface))
+                        .clipShape(Circle())
+                }
+                .offset(x: 8, y: -8)
+            }
             
             TextField(
                 "",
@@ -206,5 +320,544 @@ private struct CircleImageView: View {
                     }
                 }
             })
+    }
+}
+
+private struct AbilityActionSheet: View {
+    let ability: SupportedAbility
+    let sourceSeat: Seat
+    let seats: [Seat]
+    let characters: [Character]
+    let selectedSeatIDs: [UUID]
+    let onSubmit: (AbilitySelection) -> Void
+
+    var body: some View {
+        switch ability.input {
+        case let .text(placeholder):
+            NoteTakeView(
+                title: sheetTitle,
+                onComplete: { text in
+                    onSubmit(.text(text))
+                },
+                buttonTitle: "Record",
+                placeholder: placeholder,
+                note: ""
+            )
+        case let .players(minSelectionCount, maxSelectionCount, _, _, _):
+            PlayerSelectionAbilityView(
+                title: sheetTitle,
+                seats: seats,
+                minSelectionCount: minSelectionCount,
+                maxSelectionCount: maxSelectionCount,
+                selectedSeatIDs: selectedSeatIDs,
+                onSubmit: { selectedSeats in
+                    onSubmit(.players(selectedSeats))
+                }
+            )
+        case .playerAndCharacter:
+            PlayerAndCharacterAbilityView(
+                title: sheetTitle,
+                seats: seats,
+                characters: characters,
+                onSubmit: { targetSeat, character in
+                    onSubmit(.playerAndCharacter(player: targetSeat, character: character))
+                }
+            )
+        case let .playersAndCharacter(playerCount, _, _, _, characterScope):
+            PlayersAndCharacterAbilityView(
+                title: sheetTitle,
+                seats: seats,
+                characters: characters.filter(characterScope.includes(_:)),
+                playerCount: playerCount,
+                onSubmit: { selectedSeats, character in
+                    onSubmit(.playersAndCharacter(players: selectedSeats, character: character))
+                }
+            )
+        case let .playerAndTwoCharacters(_, _, _, firstCharacterScope, secondCharacterScope):
+            PlayerAndTwoCharactersAbilityView(
+                title: sheetTitle,
+                seats: seats,
+                firstCharacters: characters.filter(firstCharacterScope.includes(_:)),
+                secondCharacters: characters.filter(secondCharacterScope.includes(_:)),
+                onSubmit: { targetSeat, firstCharacter, secondCharacter in
+                    onSubmit(.playerAndTwoCharacters(player: targetSeat, firstCharacter: firstCharacter, secondCharacter: secondCharacter))
+                }
+            )
+        case let .multiplePlayerAndCharacter(maxSelectionCount, _, _, _, characterScope):
+            MultiplePlayerCharacterGuessesView(
+                title: sheetTitle,
+                seats: seats,
+                characters: characters.filter(characterScope.includes(_:)),
+                maxSelectionCount: maxSelectionCount,
+                onSubmit: { guesses in
+                    onSubmit(.multiplePlayerAndCharacter(guesses))
+                }
+            )
+        case .character:
+            CharacterAbilityView(
+                title: sheetTitle,
+                characters: characters,
+                onSubmit: { character in
+                    onSubmit(.character(character))
+                }
+            )
+        }
+    }
+
+    private var sheetTitle: String {
+        sourceSeat.player.name.isEmpty ? ability.menuTitle : "\(sourceSeat.player.name): \(ability.menuTitle)"
+    }
+}
+
+private struct PlayerSelectionAbilityView: View {
+    let title: String
+    let seats: [Seat]
+    let minSelectionCount: Int
+    let maxSelectionCount: Int
+    let onSubmit: ([Seat]) -> Void
+
+    @State private var selectedSeatIDs: Set<UUID>
+
+    init(title: String, seats: [Seat], minSelectionCount: Int, maxSelectionCount: Int, selectedSeatIDs: [UUID] = [], onSubmit: @escaping ([Seat]) -> Void) {
+        self.title = title
+        self.seats = seats
+        self.minSelectionCount = minSelectionCount
+        self.maxSelectionCount = maxSelectionCount
+        self.onSubmit = onSubmit
+        _selectedSeatIDs = State(initialValue: Set(selectedSeatIDs))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List(seats) { targetSeat in
+                Button {
+                    toggle(targetSeat)
+                } label: {
+                    AbilitySeatRow(
+                        seat: targetSeat,
+                        isSelected: selectedSeatIDs.contains(targetSeat.id)
+                    )
+                }
+                .listRowBackground(Color(.themeSurface).opacity(0.92))
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Record") {
+                        onSubmit(seats.filter { selectedSeatIDs.contains($0.id) })
+                    }
+                    .disabled(!isSelectionValid)
+                }
+            }
+        }
+    }
+
+    private var isSelectionValid: Bool {
+        selectedSeatIDs.count >= minSelectionCount && selectedSeatIDs.count <= maxSelectionCount
+    }
+
+    private func toggle(_ seat: Seat) {
+        if selectedSeatIDs.contains(seat.id) {
+            selectedSeatIDs.remove(seat.id)
+            return
+        }
+
+        if maxSelectionCount == 1 {
+            selectedSeatIDs = [seat.id]
+        } else if selectedSeatIDs.count < maxSelectionCount {
+            selectedSeatIDs.insert(seat.id)
+        }
+    }
+}
+
+private struct PlayerAndCharacterAbilityView: View {
+    let title: String
+    let seats: [Seat]
+    let characters: [Character]
+    let onSubmit: (Seat, Character) -> Void
+
+    @State private var selectedSeatID: UUID?
+    @State private var selectedCharacterID: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Player") {
+                    ForEach(seats) { targetSeat in
+                        Button {
+                            selectedSeatID = targetSeat.id
+                        } label: {
+                            AbilitySeatRow(
+                                seat: targetSeat,
+                                isSelected: selectedSeatID == targetSeat.id
+                            )
+                        }
+                    }
+                }
+
+                Section("Character") {
+                    ForEach(characters) { character in
+                        Button {
+                            selectedCharacterID = character.id
+                        } label: {
+                            HStack {
+                                Text(character.name)
+                                    .foregroundStyle(.themeOnSurface)
+                                Spacer()
+                                if selectedCharacterID == character.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.themePrimary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Record") {
+                        if let selectedSeat = seats.first(where: { $0.id == selectedSeatID }),
+                           let selectedCharacter = characters.first(where: { $0.id == selectedCharacterID }) {
+                            onSubmit(selectedSeat, selectedCharacter)
+                        }
+                    }
+                    .disabled(selectedSeatID == nil || selectedCharacterID == nil)
+                }
+            }
+        }
+    }
+}
+
+private struct PlayersAndCharacterAbilityView: View {
+    let title: String
+    let seats: [Seat]
+    let characters: [Character]
+    let playerCount: Int
+    let onSubmit: ([Seat], Character) -> Void
+
+    @State private var selectedSeatIDs: Set<UUID> = []
+    @State private var selectedCharacterID: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Players") {
+                    ForEach(seats) { targetSeat in
+                        Button {
+                            toggleSeat(targetSeat)
+                        } label: {
+                            AbilitySeatRow(seat: targetSeat, isSelected: selectedSeatIDs.contains(targetSeat.id))
+                        }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+                    }
+                }
+
+                Section("Character") {
+                    ForEach(characters) { character in
+                        Button {
+                            selectedCharacterID = character.id
+                        } label: {
+                            CharacterSelectionRow(character: character, isSelected: selectedCharacterID == character.id)
+                        }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Record") {
+                        if let character = characters.first(where: { $0.id == selectedCharacterID }) {
+                            onSubmit(seats.filter { selectedSeatIDs.contains($0.id) }, character)
+                        }
+                    }
+                    .disabled(selectedSeatIDs.count != playerCount || selectedCharacterID == nil)
+                }
+            }
+        }
+    }
+
+    private func toggleSeat(_ seat: Seat) {
+        if selectedSeatIDs.contains(seat.id) {
+            selectedSeatIDs.remove(seat.id)
+            return
+        }
+
+        if selectedSeatIDs.count < playerCount {
+            selectedSeatIDs.insert(seat.id)
+        }
+    }
+}
+
+private struct PlayerAndTwoCharactersAbilityView: View {
+    let title: String
+    let seats: [Seat]
+    let firstCharacters: [Character]
+    let secondCharacters: [Character]
+    let onSubmit: (Seat, Character, Character) -> Void
+
+    @State private var selectedSeatID: UUID?
+    @State private var firstCharacterID: String?
+    @State private var secondCharacterID: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Player") {
+                    ForEach(seats) { targetSeat in
+                        Button {
+                            selectedSeatID = targetSeat.id
+                        } label: {
+                            AbilitySeatRow(seat: targetSeat, isSelected: selectedSeatID == targetSeat.id)
+                        }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+                    }
+                }
+
+                Section("Good Character") {
+                    ForEach(firstCharacters) { character in
+                        Button {
+                            firstCharacterID = character.id
+                        } label: {
+                            CharacterSelectionRow(character: character, isSelected: firstCharacterID == character.id)
+                        }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+                    }
+                }
+
+                Section("Evil Character") {
+                    ForEach(secondCharacters) { character in
+                        Button {
+                            secondCharacterID = character.id
+                        } label: {
+                            CharacterSelectionRow(character: character, isSelected: secondCharacterID == character.id)
+                        }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Record") {
+                        if let seat = seats.first(where: { $0.id == selectedSeatID }),
+                           let firstCharacter = firstCharacters.first(where: { $0.id == firstCharacterID }),
+                           let secondCharacter = secondCharacters.first(where: { $0.id == secondCharacterID }) {
+                            onSubmit(seat, firstCharacter, secondCharacter)
+                        }
+                    }
+                    .disabled(selectedSeatID == nil || firstCharacterID == nil || secondCharacterID == nil)
+                }
+            }
+        }
+    }
+}
+
+private struct MultiplePlayerCharacterGuessesView: View {
+    let title: String
+    let seats: [Seat]
+    let characters: [Character]
+    let maxSelectionCount: Int
+    let onSubmit: ([(Seat, Character)]) -> Void
+
+    @State private var guesses: [PlayerCharacterGuess] = [PlayerCharacterGuess()]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(Array(guesses.enumerated()), id: \.element.id) { index, _ in
+                    Section("Guess \(index + 1)") {
+                        Picker("Player", selection: bindingForSeat(at: index)) {
+                            Text("Select player").tag(UUID?.none)
+                            ForEach(seats) { targetSeat in
+                                Text(targetSeat.player.name.isEmpty ? "Unnamed player" : targetSeat.player.name)
+                                    .tag(Optional(targetSeat.id))
+                            }
+                        }
+
+                        Picker("Character", selection: bindingForCharacter(at: index)) {
+                            Text("Select character").tag(String?.none)
+                            ForEach(characters) { character in
+                                Text(character.name)
+                                    .tag(Optional(character.id))
+                            }
+                        }
+                    }
+                }
+
+                if guesses.count < maxSelectionCount {
+                    Button("Add Guess") {
+                        guesses.append(PlayerCharacterGuess())
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Record") {
+                        onSubmit(compactGuesses)
+                    }
+                    .disabled(compactGuesses.isEmpty)
+                }
+            }
+        }
+    }
+
+    private var compactGuesses: [(Seat, Character)] {
+        guesses.compactMap { guess in
+            guard let seatID = guess.seatID,
+                  let characterID = guess.characterID,
+                  let seat = seats.first(where: { $0.id == seatID }),
+                  let character = characters.first(where: { $0.id == characterID }) else {
+                return nil
+            }
+            return (seat, character)
+        }
+    }
+
+    private func bindingForSeat(at index: Int) -> Binding<UUID?> {
+        Binding(
+            get: { guesses[index].seatID },
+            set: { guesses[index].seatID = $0 }
+        )
+    }
+
+    private func bindingForCharacter(at index: Int) -> Binding<String?> {
+        Binding(
+            get: { guesses[index].characterID },
+            set: { guesses[index].characterID = $0 }
+        )
+    }
+}
+
+private struct CharacterAbilityView: View {
+    let title: String
+    let characters: [Character]
+    let onSubmit: (Character) -> Void
+
+    @State private var selectedCharacterID: String?
+
+    var body: some View {
+        NavigationStack {
+            List(characters) { character in
+                Button {
+                    selectedCharacterID = character.id
+                } label: {
+                    HStack {
+                        Text(character.name)
+                            .foregroundStyle(.themeOnSurface)
+                        Spacer()
+                        if selectedCharacterID == character.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.themePrimary)
+                        }
+                    }
+                }
+                .listRowBackground(Color(.themeSurface).opacity(0.92))
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Record") {
+                        if let selectedCharacter = characters.first(where: { $0.id == selectedCharacterID }) {
+                            onSubmit(selectedCharacter)
+                        }
+                    }
+                    .disabled(selectedCharacterID == nil)
+                }
+            }
+        }
+    }
+}
+
+private struct CharacterSelectionRow: View {
+    let character: Character
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.white)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(character.imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .clipShape(Circle())
+                }
+
+            Text(character.name)
+                .foregroundStyle(.themeOnSurface)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.themePrimary)
+            }
+        }
+    }
+}
+
+private struct PlayerCharacterGuess: Identifiable {
+    let id = UUID()
+    var seatID: UUID?
+    var characterID: String?
+}
+private struct AbilitySeatRow: View {
+    let seat: Seat
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.white)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    if let character = seat.player.character {
+                        Image(character.imageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    }
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(seat.player.name.isEmpty ? "Unnamed player" : seat.player.name)
+                    .foregroundStyle(.themeOnSurface)
+
+                if let roleName = seat.player.character?.name {
+                    Text(roleName)
+                        .font(.caption)
+                        .foregroundStyle(.themePrimary.opacity(0.75))
+                }
+            }
+
+            Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.themePrimary)
+            }
+        }
     }
 }
