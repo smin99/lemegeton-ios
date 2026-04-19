@@ -41,24 +41,36 @@ struct PastGamesView: View {
                 List(boardVM.pastGames.indices, id: \.self) { index in
                     let game = boardVM.pastGames[index]
 
-                    NavigationLink {
-                        PastGameDetailView(game: game)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Game \(boardVM.pastGames.count - index)")
-                                .grimoireBoldStyle(size: 20)
+                    HStack(spacing: 12) {
+                        NavigationLink {
+                            PastGameDetailView(game: game)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Game \(boardVM.pastGames.count - index)")
+                                    .grimoireBoldStyle(size: 20)
 
-                            Label(Self.gameDateFormatter.string(from: game.mdate), systemImage: "calendar")
-                                .grimoireStyle(size: 16, italic: false)
+                                Label(Self.gameDateFormatter.string(from: game.mdate), systemImage: "calendar")
+                                    .grimoireStyle(size: 16, italic: false)
 
-                            Label(game.didEvilWin() ? "Evil won" : "Good won", systemImage: game.didEvilWin() ? "moon.stars.fill" : "sun.max.fill")
-                                .grimoireStyle(size: 16, italic: false)
-                                .foregroundStyle(game.didEvilWin() ? Color.red : Color.green)
+                                Label(game.didEvilWin() ? "Evil won" : "Good won", systemImage: game.didEvilWin() ? "moon.stars.fill" : "sun.max.fill")
+                                    .grimoireStyle(size: 16, italic: false)
+                                    .foregroundStyle(game.didEvilWin() ? Color.red : Color.green)
 
-                            Label("\(game.seats.count) players", systemImage: "person.3.fill")
-                                .grimoireStyle(size: 16, italic: false)
+                                Label("\(game.seats.count) players", systemImage: "person.3.fill")
+                                    .grimoireStyle(size: 16, italic: false)
+                            }
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .padding(.vertical, 8)
+                        
+                        Button {
+                            boardVM.replayPastGame(game)
+                        } label: {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.themePrimary)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .listRowBackground(Color(.themeSurface).opacity(0.92))
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {

@@ -12,10 +12,13 @@ import CoreGraphics
 class BoardViewModel: ObservableObject {
     
     private let repo = GameRepo.shared
+    private let maxUndoCount = 30
     
     @Published var currentGame: Game
     @Published var pastGames: [Game]
     @Published var allCharacters: [Character]
+    
+    private var undoStack: [Game] = []
     
     private let characterSaveFileName = "characterState.json"
     private let saveFileName = "gameState.json"
@@ -54,6 +57,7 @@ class BoardViewModel: ObservableObject {
     
     func updateSetup() {
         currentGame.gameState = currentGame.gameState == .set_up ? .in_game : .set_up
+        undoStack.removeAll()
         if currentGame.gameState == .in_game {
             currentGame.startChronicleIfNeeded()
         }
@@ -70,6 +74,7 @@ class BoardViewModel: ObservableObject {
     func resetBoard() {
         repo.startNewGame()
         currentGame = repo.currentGame!
+        undoStack.removeAll()
     }
     
     func canEndGame() -> Bool {
@@ -80,6 +85,7 @@ class BoardViewModel: ObservableObject {
     }
     
     func endGame(resetGame: Bool) {
+        undoStack.removeAll()
         currentGame.gameState = .game_over
         repo.saveCurrentGame(currentGame: currentGame)
         repo.endCurrentGame()
@@ -109,6 +115,7 @@ class BoardViewModel: ObservableObject {
     
     func deathUpon(seat: Seat) {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            saveUndoSnapshotIfNeeded()
             currentGame.seats[idx].player.isDead = !currentGame.seats[idx].player.isDead
             let playerName = currentGame.seats[idx].player.name.isEmpty ? "Unnamed player" : currentGame.seats[idx].player.name
             let event = currentGame.seats[idx].player.isDead ? "\(playerName) died." : "\(playerName) was revived."
@@ -119,6 +126,7 @@ class BoardViewModel: ObservableObject {
     
     func editSeatName(seat: Seat, newName: String) {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            saveUndoSnapshotIfNeeded()
             currentGame.seats[idx].player.editName(newName: newName)
             saveState()
         }
@@ -126,6 +134,7 @@ class BoardViewModel: ObservableObject {
     
     func updatePlayerNote(seat: Seat, note: String) {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            saveUndoSnapshotIfNeeded()
             currentGame.seats[idx].player.updateNote(newNote: note)
             saveState()
         }
@@ -135,6 +144,8 @@ class BoardViewModel: ObservableObject {
         guard let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) else {
             return
         }
+        
+        saveUndoSnapshotIfNeeded()
 
         let playerName = currentGame.seats[idx].player.name.isEmpty ? "Unnamed player" : currentGame.seats[idx].player.name
         let previousClaim = currentGame.seats[idx].player.character
@@ -160,6 +171,8 @@ class BoardViewModel: ObservableObject {
               let ability = character.supportedAbility else {
             return
         }
+        
+        saveUndoSnapshotIfNeeded()
 
         currentGame.seats[sourceIndex].player.activeAbilityTargetSeatID = targetSeat?.id
 
@@ -181,7 +194,8 @@ class BoardViewModel: ObservableObject {
         guard currentGame.seats.contains(where: { $0.id == seat.id }) else {
             return
         }
-
+        
+        saveUndoSnapshotIfNeeded()
         currentGame.appendCurrentPhaseEvent(summary)
         saveState()
     }
@@ -196,12 +210,26 @@ class BoardViewModel: ObservableObject {
     }
 
     func updateCurrentPhaseNote(_ note: String) {
+        saveUndoSnapshotIfNeeded()
         currentGame.updateCurrentPhaseNote(note)
         saveState()
     }
 
     func advancePhase() {
+        saveUndoSnapshotIfNeeded()
         currentGame.advancePhase()
+        saveState()
+    }
+    
+    var canUndoLastRecord: Bool {
+        currentGame.gameState != .set_up && !undoStack.isEmpty
+    }
+    
+    func undoLastRecord() {
+        guard canUndoLastRecord, let previousGame = undoStack.popLast() else {
+            return
+        }
+        currentGame = previousGame
         saveState()
     }
     
@@ -219,5 +247,24 @@ class BoardViewModel: ObservableObject {
     func removePastGames(atOffsets offsets: IndexSet) {
         repo.removePastGames(atOffsets: offsets)
         pastGames = repo.pastGames
+    }
+    
+    func replayPastGame(_ game: Game) {
+        var replayGame = game
+        replayGame.mdate = Date()
+        replayGame.isCompleted = false
+        replayGame.gameState = .set_up
+        
+        currentGame = replayGame
+        undoStack.removeAll()
+        saveState()
+    }
+    
+    private func saveUndoSnapshotIfNeeded() {
+        guard currentGame.gameState != .set_up else { return }
+        undoStack.append(currentGame)
+        if undoStack.count > maxUndoCount {
+            undoStack.removeFirst(undoStack.count - maxUndoCount)
+        }
     }
 }
