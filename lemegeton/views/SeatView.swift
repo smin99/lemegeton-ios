@@ -95,19 +95,19 @@ struct SeatView: View {
                     }
                     .sheet(isPresented: $showNoteEditor) {
                         NoteTakeView(
-                            title: "\(seat.player.name)'s Note",
+                            title: L10n.tr("%@'s Note", seat.player.name),
                             onComplete: { note in
                                 boardVM.updatePlayerNote(seat: seat, note: note)
                                 showNoteEditor = false
                             },
-                            buttonTitle: "Done",
-                            placeholder: "Write a private note",
+                            buttonTitle: L10n.tr("Done"),
+                            placeholder: L10n.tr("Write a private note"),
                             note: seat.player.note
                         )
                     }
                     .sheet(isPresented: $showCharacterList) {
                         CharacterListView(
-                            titleText: "Guess \(seat.player.name)'s role",
+                            titleText: L10n.tr("Guess %@'s role", seat.player.name),
                             onComplete: { characters in
                                 boardVM.updateClaimedRole(
                                     seat: seat,
@@ -172,10 +172,10 @@ struct SeatView: View {
         switch ability {
         case .monkProtect:
             if let target = boardVM.activeAbilityTarget(for: seat) {
-                let targetName = target.player.name.isEmpty ? "Unnamed player" : target.player.name
-                return "Protected: \(targetName)"
+                let targetName = target.player.name.isEmpty ? L10n.tr("Unnamed player") : target.player.name
+                return L10n.tr("Protected: %@", targetName)
             }
-            return "Protected"
+            return L10n.tr("Protected")
         default:
             return ability.menuTitle
         }
@@ -241,7 +241,7 @@ struct SeatView: View {
             return
         }
 
-        let actorName = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Unnamed player" : seat.player.name
+        let actorName = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.tr("Unnamed player") : seat.player.name
         guard let summary = ability.chronicleSummary(actorName: actorName, selection: selection) else {
             return
         }
@@ -458,7 +458,7 @@ private struct AbilityActionSheet: View {
                 onComplete: { text in
                     onSubmit(.text(text))
                 },
-                buttonTitle: "Record",
+                buttonTitle: L10n.tr("Record"),
                 placeholder: placeholder,
                 note: ""
             )
@@ -524,7 +524,7 @@ private struct AbilityActionSheet: View {
     }
 
     private var sheetTitle: String {
-        sourceSeat.player.name.isEmpty ? ability.menuTitle : "\(sourceSeat.player.name): \(ability.menuTitle)"
+        sourceSeat.player.name.isEmpty ? ability.menuTitle : L10n.tr("%@: %@", sourceSeat.player.name, ability.menuTitle)
     }
 }
 
@@ -623,7 +623,7 @@ private struct PlayerAndCharacterAbilityView: View {
                             selectedCharacterID = character.id
                         } label: {
                             HStack {
-                                Text(character.name)
+                                Text(character.localizedName)
                                     .foregroundStyle(.themeOnSurface)
                                 Spacer()
                                 if selectedCharacterID == character.id {
@@ -798,11 +798,11 @@ private struct MultiplePlayerCharacterGuessesView: View {
         NavigationStack {
             List {
                 ForEach(Array(guesses.enumerated()), id: \.element.id) { index, _ in
-                    Section("Guess \(index + 1)") {
+                    Section(L10n.tr("Guess %lld", Int64(index + 1))) {
                         Picker("Player", selection: bindingForSeat(at: index)) {
                             Text("Select player").tag(UUID?.none)
                             ForEach(seats) { targetSeat in
-                                Text(targetSeat.player.name.isEmpty ? "Unnamed player" : targetSeat.player.name)
+                                Text(targetSeat.player.name.isEmpty ? L10n.tr("Unnamed player") : targetSeat.player.name)
                                     .tag(Optional(targetSeat.id))
                             }
                         }
@@ -810,7 +810,7 @@ private struct MultiplePlayerCharacterGuessesView: View {
                         Picker("Character", selection: bindingForCharacter(at: index)) {
                             Text("Select character").tag(String?.none)
                             ForEach(characters) { character in
-                                Text(character.name)
+                                Text(character.localizedName)
                                     .tag(Optional(character.id))
                             }
                         }
@@ -879,7 +879,7 @@ private struct CharacterAbilityView: View {
                     selectedCharacterID = character.id
                 } label: {
                     HStack {
-                        Text(character.name)
+                        Text(character.localizedName)
                             .foregroundStyle(.themeOnSurface)
                         Spacer()
                         if selectedCharacterID == character.id {
@@ -925,7 +925,7 @@ private struct CharacterSelectionRow: View {
                         .clipShape(Circle())
                 }
 
-            Text(character.name)
+            Text(character.localizedName)
                 .foregroundStyle(.themeOnSurface)
             Spacer()
             if isSelected {
@@ -961,10 +961,10 @@ private struct AbilitySeatRow: View {
                 }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(seat.player.name.isEmpty ? "Unnamed player" : seat.player.name)
+                Text(seat.player.name.isEmpty ? L10n.tr("Unnamed player") : seat.player.name)
                     .foregroundStyle(.themeOnSurface)
 
-                if let roleName = seat.player.character?.name {
+                if let roleName = seat.player.character?.localizedName {
                     Text(roleName)
                         .font(.caption)
                         .foregroundStyle(.themePrimary.opacity(0.75))

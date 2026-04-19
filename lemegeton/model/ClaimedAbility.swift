@@ -109,61 +109,61 @@ enum SupportedAbility: String, Codable, Identifiable {
     var menuTitle: String {
         switch self {
         case .washerwomanInfo, .librarianInfo, .investigatorInfo:
-            return "Record Pair"
+            return L10n.tr("Record Pair")
         case .chefInfo, .empathInfo, .undertakerInfo, .mathematicianInfo,
              .flowergirlInfo, .townCrierInfo, .oracleInfo, .savantInfo:
-            return "Record Info"
+            return L10n.tr("Record Info")
         case .fortuneTellerCheck:
-            return "Checked"
+            return L10n.tr("Checked")
         case .monkProtect, .innkeeperProtect, .devilsAdvocateProtect:
-            return "Protected"
+            return L10n.tr("Protected")
         case .ravenkeeperCheck:
-            return "Checked Player"
+            return L10n.tr("Checked Player")
         case .slayerShot:
-            return "Shot"
+            return L10n.tr("Shot")
         case .butlerMaster:
-            return "Master"
+            return L10n.tr("Master")
         case .poisonerPoison, .pukkaPoison:
-            return "Poisoned"
+            return L10n.tr("Poisoned")
         case .impKill, .assassinKill, .zombuulKill, .shabalothKill, .fangGuAttack,
              .vigormortisAttack, .noDashiiAttack, .vortoxAttack, .godfatherKill:
-            return "Attacked"
+            return L10n.tr("Attacked")
         case .grandmotherInfo:
-            return "Learned Player"
+            return L10n.tr("Learned Player")
         case .sailorChoose:
-            return "Drank With"
+            return L10n.tr("Drank With")
         case .chambermaidCheck, .seamstressCheck:
-            return "Chose Players"
+            return L10n.tr("Chose Players")
         case .exorcistBlock:
-            return "Exorcised"
+            return L10n.tr("Exorcised")
         case .gamblerGuess:
-            return "Guess"
+            return L10n.tr("Guess")
         case .gossipStatement:
-            return "Statement"
+            return L10n.tr("Statement")
         case .courtierChooseCharacter:
-            return "Made Drunk"
+            return L10n.tr("Made Drunk")
         case .professorResurrect:
-            return "Resurrected"
+            return L10n.tr("Resurrected")
         case .lunaticAttack:
-            return "Targeted"
+            return L10n.tr("Targeted")
         case .moonchildCurse, .witchCurse:
-            return "Cursed"
+            return L10n.tr("Cursed")
         case .poAttack:
-            return "Attacked"
+            return L10n.tr("Attacked")
         case .dreamerInfo:
-            return "Dreamed"
+            return L10n.tr("Dreamed")
         case .snakeCharmerCheck:
-            return "Charmed"
+            return L10n.tr("Charmed")
         case .philosopherChoose:
-            return "Became"
+            return L10n.tr("Became")
         case .artistQuestion:
-            return "Question"
+            return L10n.tr("Question")
         case .jugglerInfo:
-            return "Guesses"
+            return L10n.tr("Guesses")
         case .cerenovusMadness:
-            return "Mad As"
+            return L10n.tr("Mad As")
         case .pitHagTransform:
-            return "Transform"
+            return L10n.tr("Transform")
         }
     }
 
@@ -191,7 +191,7 @@ enum SupportedAbility: String, Codable, Identifiable {
         case .chefInfo, .empathInfo, .undertakerInfo, .gossipStatement,
              .mathematicianInfo, .flowergirlInfo, .townCrierInfo, .oracleInfo,
              .savantInfo, .artistQuestion:
-            return .text(placeholder: "Record the claimed ability use")
+            return .text(placeholder: L10n.tr("Record the claimed ability use"))
         case .washerwomanInfo:
             return .playersAndCharacter(playerCount: 2, excludeSelf: true, aliveOnly: false, deadOnly: false, characterScope: .townsfolk)
         case .librarianInfo:
@@ -233,106 +233,106 @@ enum SupportedAbility: String, Codable, Identifiable {
     func chronicleSummary(actorName: String, selection: AbilitySelection) -> String? {
         switch (self, selection) {
         case let (.washerwomanInfo, .playersAndCharacter(players, character)):
-            return "\(actorName), the claimed Washerwoman has said that \(seatNames(players)) includes the \(character.name)."
+            return L10n.tr("%@, the claimed Washerwoman has said that %@ includes the %@.", actorName, seatNames(players), character.localizedName)
         case let (.librarianInfo, .playersAndCharacter(players, character)):
-            return "\(actorName), the claimed Librarian has said that \(seatNames(players)) includes the \(character.name)."
+            return L10n.tr("%@, the claimed Librarian has said that %@ includes the %@.", actorName, seatNames(players), character.localizedName)
         case let (.investigatorInfo, .playersAndCharacter(players, character)):
-            return "\(actorName), the claimed Investigator has said that \(seatNames(players)) includes the \(character.name)."
+            return L10n.tr("%@, the claimed Investigator has said that %@ includes the %@.", actorName, seatNames(players), character.localizedName)
         case let (.fortuneTellerCheck, .players(seats)):
-            return "\(actorName), the claimed Fortune Teller has said they checked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Fortune Teller has said they checked %@.", actorName, seatNames(seats))
         case let (.ravenkeeperCheck, .players(seats)):
-            return "\(actorName), the claimed Ravenkeeper has said they checked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Ravenkeeper has said they checked %@.", actorName, seatNames(seats))
         case let (.slayerShot, .players(seats)):
-            return "\(actorName), the claimed Slayer has said they shot \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Slayer has said they shot %@.", actorName, seatNames(seats))
         case let (.butlerMaster, .players(seats)):
-            return "\(actorName), the claimed Butler has said they chose \(seatNames(seats)) as their master."
+            return L10n.tr("%@, the claimed Butler has said they chose %@ as their master.", actorName, seatNames(seats))
         case let (.poisonerPoison, .players(seats)):
-            return "\(actorName), the claimed Poisoner has said they poisoned \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Poisoner has said they poisoned %@.", actorName, seatNames(seats))
         case let (.impKill, .players(seats)):
-            return "\(actorName), the claimed Imp has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Imp has said they attacked %@.", actorName, seatNames(seats))
         case let (.grandmotherInfo, .playerAndCharacter(player, character)):
-            return "\(actorName), the claimed Grandmother has said they learned that \(seatName(player)) is the \(character.name)."
+            return L10n.tr("%@, the claimed Grandmother has said they learned that %@ is the %@.", actorName, seatName(player), character.localizedName)
         case let (.sailorChoose, .players(seats)):
-            return "\(actorName), the claimed Sailor has said they drank with \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Sailor has said they drank with %@.", actorName, seatNames(seats))
         case let (.chambermaidCheck, .players(seats)):
-            return "\(actorName), the claimed Chambermaid has said they checked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Chambermaid has said they checked %@.", actorName, seatNames(seats))
         case let (.exorcistBlock, .players(seats)):
-            return "\(actorName), the claimed Exorcist has said they chose \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Exorcist has said they chose %@.", actorName, seatNames(seats))
         case let (.innkeeperProtect, .players(seats)):
-            return "\(actorName), the claimed Innkeeper has said they protected \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Innkeeper has said they protected %@.", actorName, seatNames(seats))
         case let (.gamblerGuess, .playerAndCharacter(player, character)):
-            return "\(actorName), the claimed Gambler has said they guessed that \(seatName(player)) was the \(character.name)."
+            return L10n.tr("%@, the claimed Gambler has said they guessed that %@ was the %@.", actorName, seatName(player), character.localizedName)
         case let (.gossipStatement, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Gossip", verb: "made the statement", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Gossip"), verb: L10n.tr("made the statement"), text: text)
         case let (.courtierChooseCharacter, .character(character)):
-            return "\(actorName), the claimed Courtier has said they chose \(character.name)."
+            return L10n.tr("%@, the claimed Courtier has said they chose %@.", actorName, character.localizedName)
         case let (.professorResurrect, .players(seats)):
-            return "\(actorName), the claimed Professor has said they resurrected \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Professor has said they resurrected %@.", actorName, seatNames(seats))
         case let (.lunaticAttack, .players(seats)):
-            return "\(actorName), the claimed Lunatic has said they targeted \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Lunatic has said they targeted %@.", actorName, seatNames(seats))
         case let (.moonchildCurse, .players(seats)):
-            return "\(actorName), the claimed Moonchild has said they chose \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Moonchild has said they chose %@.", actorName, seatNames(seats))
         case let (.godfatherKill, .players(seats)):
-            return "\(actorName), the claimed Godfather has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Godfather has said they attacked %@.", actorName, seatNames(seats))
         case let (.devilsAdvocateProtect, .players(seats)):
-            return "\(actorName), the claimed Devil's Advocate has said they protected \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Devil's Advocate has said they protected %@.", actorName, seatNames(seats))
         case let (.assassinKill, .players(seats)):
-            return "\(actorName), the claimed Assassin has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Assassin has said they attacked %@.", actorName, seatNames(seats))
         case let (.zombuulKill, .players(seats)):
-            return "\(actorName), the claimed Zombuul has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Zombuul has said they attacked %@.", actorName, seatNames(seats))
         case let (.pukkaPoison, .players(seats)):
-            return "\(actorName), the claimed Pukka has said they poisoned \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Pukka has said they poisoned %@.", actorName, seatNames(seats))
         case let (.shabalothKill, .players(seats)):
-            return "\(actorName), the claimed Shabaloth has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Shabaloth has said they attacked %@.", actorName, seatNames(seats))
         case let (.poAttack, .players(seats)):
             if seats.isEmpty {
-                return "\(actorName), the claimed Po has said they chose no-one."
+                return L10n.tr("%@, the claimed Po has said they chose no-one.", actorName)
             }
-            return "\(actorName), the claimed Po has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Po has said they attacked %@.", actorName, seatNames(seats))
         case let (.dreamerInfo, .playerAndTwoCharacters(player, firstCharacter, secondCharacter)):
-            return "\(actorName), the claimed Dreamer has said they learned that \(seatName(player)) is either the \(firstCharacter.name) or the \(secondCharacter.name)."
+            return L10n.tr("%@, the claimed Dreamer has said they learned that %@ is either the %@ or the %@.", actorName, seatName(player), firstCharacter.localizedName, secondCharacter.localizedName)
         case let (.snakeCharmerCheck, .players(seats)):
-            return "\(actorName), the claimed Snake Charmer has said they chose \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Snake Charmer has said they chose %@.", actorName, seatNames(seats))
         case let (.seamstressCheck, .players(seats)):
-            return "\(actorName), the claimed Seamstress has said they checked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Seamstress has said they checked %@.", actorName, seatNames(seats))
         case let (.philosopherChoose, .character(character)):
-            return "\(actorName), the claimed Philosopher has said they chose \(character.name)."
+            return L10n.tr("%@, the claimed Philosopher has said they chose %@.", actorName, character.localizedName)
         case let (.artistQuestion, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Artist", verb: "asked", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Artist"), verb: L10n.tr("asked"), text: text)
         case let (.jugglerInfo, .multiplePlayerAndCharacter(guesses)):
             guard !guesses.isEmpty else { return nil }
-            let guessSummary = guesses.map { "\(seatName($0.0)) as \($0.1.name)" }.joined(separator: ", ")
-            return "\(actorName), the claimed Juggler has said they guessed \(guessSummary)."
+            let guessSummary = guesses.map { L10n.tr("%@ as %@", seatName($0.0), $0.1.localizedName) }.joined(separator: ", ")
+            return L10n.tr("%@, the claimed Juggler has said they guessed %@.", actorName, guessSummary)
         case let (.witchCurse, .players(seats)):
-            return "\(actorName), the claimed Witch has said they cursed \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Witch has said they cursed %@.", actorName, seatNames(seats))
         case let (.cerenovusMadness, .playerAndCharacter(player, character)):
-            return "\(actorName), the claimed Cerenovus has said they chose \(seatName(player)) and made them mad as \(character.name)."
+            return L10n.tr("%@, the claimed Cerenovus has said they chose %@ and made them mad as %@.", actorName, seatName(player), character.localizedName)
         case let (.pitHagTransform, .playerAndCharacter(player, character)):
-            return "\(actorName), the claimed Pit-Hag has said they chose \(seatName(player)) to become \(character.name)."
+            return L10n.tr("%@, the claimed Pit-Hag has said they chose %@ to become %@.", actorName, seatName(player), character.localizedName)
         case let (.fangGuAttack, .players(seats)):
-            return "\(actorName), the claimed Fang Gu has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Fang Gu has said they attacked %@.", actorName, seatNames(seats))
         case let (.vigormortisAttack, .players(seats)):
-            return "\(actorName), the claimed Vigormortis has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Vigormortis has said they attacked %@.", actorName, seatNames(seats))
         case let (.noDashiiAttack, .players(seats)):
-            return "\(actorName), the claimed No Dashii has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed No Dashii has said they attacked %@.", actorName, seatNames(seats))
         case let (.vortoxAttack, .players(seats)):
-            return "\(actorName), the claimed Vortox has said they attacked \(seatNames(seats))."
+            return L10n.tr("%@, the claimed Vortox has said they attacked %@.", actorName, seatNames(seats))
         case let (.chefInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Chef", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Chef"), verb: L10n.tr("has said"), text: text)
         case let (.empathInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Empath", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Empath"), verb: L10n.tr("has said"), text: text)
         case let (.undertakerInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Undertaker", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Undertaker"), verb: L10n.tr("has said"), text: text)
         case let (.mathematicianInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Mathematician", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Mathematician"), verb: L10n.tr("has said"), text: text)
         case let (.flowergirlInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Flowergirl", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Flowergirl"), verb: L10n.tr("has said"), text: text)
         case let (.townCrierInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Town Crier", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Town Crier"), verb: L10n.tr("has said"), text: text)
         case let (.oracleInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Oracle", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Oracle"), verb: L10n.tr("has said"), text: text)
         case let (.savantInfo, .text(text)):
-            return textSummary(actorName: actorName, roleName: "Savant", verb: "has said", text: text)
+            return textSummary(actorName: actorName, roleName: L10n.tr("Savant"), verb: L10n.tr("has said"), text: text)
         default:
             return nil
         }
@@ -341,25 +341,25 @@ enum SupportedAbility: String, Codable, Identifiable {
     private func textSummary(actorName: String, roleName: String, verb: String, text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        return "\(actorName), the claimed \(roleName) \(verb): \(trimmed)"
+        return L10n.tr("%@, the claimed %@ %@: %@", actorName, roleName, verb, trimmed)
     }
 
     private func seatNames(_ seats: [Seat]) -> String {
         let names = seats.map(seatName(_:))
         switch names.count {
         case 0:
-            return "no-one"
+            return L10n.tr("no-one")
         case 1:
             return names[0]
         case 2:
-            return "\(names[0]) and \(names[1])"
+            return L10n.tr("%@ and %@", names[0], names[1])
         default:
-            return names.dropLast().joined(separator: ", ") + ", and " + (names.last ?? "")
+            return L10n.tr("%@, and %@", names.dropLast().joined(separator: ", "), names.last ?? "")
         }
     }
 
     private func seatName(_ seat: Seat) -> String {
         let trimmed = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Unnamed player" : trimmed
+        return trimmed.isEmpty ? L10n.tr("Unnamed player") : trimmed
     }
 }

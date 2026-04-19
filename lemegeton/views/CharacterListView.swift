@@ -79,7 +79,7 @@ struct CharacterListView: View {
                                 }
                             })
                         
-                        Text(character.name)
+                        Text(character.localizedName)
                             .font(.caption)
                             .foregroundStyle(isInGame ? .themeOnSurface : .gray)
                     }

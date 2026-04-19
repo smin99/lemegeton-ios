@@ -91,6 +91,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ko,
 			);
 			mainGroup = 5616AB382E91949E00838238;
 			minimizedProjectReferenceProxies = 1;
@@ -259,7 +260,7 @@
 				DEVELOPMENT_TEAM = N5CD2AU49J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "레메게톤";
+				INFOPLIST_KEY_CFBundleDisplayName = Lemegeton;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -294,7 +295,7 @@
 				DEVELOPMENT_TEAM = N5CD2AU49J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "레메게톤";
+				INFOPLIST_KEY_CFBundleDisplayName = Lemegeton;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

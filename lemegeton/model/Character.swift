@@ -53,6 +53,10 @@ struct Character: Codable, Identifiable, Hashable {
         self.type = type
     }
 
+    var localizedName: String {
+        L10n.tr(name)
+    }
+
     var supportedAbility: SupportedAbility? {
         switch id {
         case "trouble_brewing_001":

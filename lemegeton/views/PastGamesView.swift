@@ -46,7 +46,7 @@ struct PastGamesView: View {
                             PastGameDetailView(game: game)
                         } label: {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Game \(boardVM.pastGames.count - index)")
+                                Text(L10n.tr("Game %lld", Int64(boardVM.pastGames.count - index)))
                                     .grimoireBoldStyle(size: 20)
 
                                 Label(Self.gameDateFormatter.string(from: game.mdate), systemImage: "calendar")
@@ -56,7 +56,7 @@ struct PastGamesView: View {
                                     .grimoireStyle(size: 16, italic: false)
                                     .foregroundStyle(game.didEvilWin() ? Color.red : Color.green)
 
-                                Label("\(game.seats.count) players", systemImage: "person.3.fill")
+                                Label(L10n.tr("%lld players", Int64(game.seats.count)), systemImage: "person.3.fill")
                                     .grimoireStyle(size: 16, italic: false)
                             }
                             .padding(.vertical, 8)
@@ -119,7 +119,7 @@ private struct PastGameDetailView: View {
                         .grimoireStyle(size: 16, italic: false)
                         .foregroundStyle(game.didEvilWin() ? Color.red : Color.green)
 
-                    Label("\(game.seats.count) players", systemImage: "person.3.fill")
+                    Label(L10n.tr("%lld players", Int64(game.seats.count)), systemImage: "person.3.fill")
                         .grimoireStyle(size: 16, italic: false)
                 }
                 .padding(20)

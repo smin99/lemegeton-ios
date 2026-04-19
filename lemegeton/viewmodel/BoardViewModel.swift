@@ -117,8 +117,10 @@ class BoardViewModel: ObservableObject {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
             saveUndoSnapshotIfNeeded()
             currentGame.seats[idx].player.isDead = !currentGame.seats[idx].player.isDead
-            let playerName = currentGame.seats[idx].player.name.isEmpty ? "Unnamed player" : currentGame.seats[idx].player.name
-            let event = currentGame.seats[idx].player.isDead ? "\(playerName) died." : "\(playerName) was revived."
+            let playerName = currentGame.seats[idx].player.name.isEmpty ? L10n.tr("Unnamed player") : currentGame.seats[idx].player.name
+            let event = currentGame.seats[idx].player.isDead
+            ? L10n.tr("%@ died.", playerName)
+            : L10n.tr("%@ was revived.", playerName)
             currentGame.appendCurrentPhaseEvent(event)
             saveState()
         }
@@ -147,7 +149,7 @@ class BoardViewModel: ObservableObject {
         
         saveUndoSnapshotIfNeeded()
 
-        let playerName = currentGame.seats[idx].player.name.isEmpty ? "Unnamed player" : currentGame.seats[idx].player.name
+        let playerName = currentGame.seats[idx].player.name.isEmpty ? L10n.tr("Unnamed player") : currentGame.seats[idx].player.name
         let previousClaim = currentGame.seats[idx].player.character
 
         currentGame.seats[idx].player.character = character
@@ -156,9 +158,9 @@ class BoardViewModel: ObservableObject {
 
         if let character {
             if let previousClaim, previousClaim.id != character.id {
-                currentGame.appendCurrentPhaseEvent("\(playerName) changed their claimed role from \(previousClaim.name) to \(character.name).")
+                currentGame.appendCurrentPhaseEvent(L10n.tr("%@ changed their claimed role from %@ to %@.", playerName, previousClaim.localizedName, character.localizedName))
             } else if previousClaim == nil {
-                currentGame.appendCurrentPhaseEvent("\(playerName) claimed \(character.name).")
+                currentGame.appendCurrentPhaseEvent(L10n.tr("%@ claimed %@.", playerName, character.localizedName))
             }
         }
 
@@ -179,9 +181,9 @@ class BoardViewModel: ObservableObject {
         switch ability {
         case .monkProtect:
             if let targetSeat {
-                let sourceName = currentGame.seats[sourceIndex].player.name.isEmpty ? "Unnamed player" : currentGame.seats[sourceIndex].player.name
-                let targetName = targetSeat.player.name.isEmpty ? "Unnamed player" : targetSeat.player.name
-                currentGame.appendCurrentPhaseEvent("\(sourceName), the claimed Monk has said to protect \(targetName).")
+                let sourceName = currentGame.seats[sourceIndex].player.name.isEmpty ? L10n.tr("Unnamed player") : currentGame.seats[sourceIndex].player.name
+                let targetName = targetSeat.player.name.isEmpty ? L10n.tr("Unnamed player") : targetSeat.player.name
+                currentGame.appendCurrentPhaseEvent(L10n.tr("%@, the claimed Monk has said to protect %@.", sourceName, targetName))
             }
         default:
             break

@@ -18,22 +18,22 @@ struct Game: Codable {
         var title: String {
             switch self {
             case .firstNight:
-                return "First Night"
+                return L10n.tr("First Night")
             case .day(let number):
-                return "Day \(number)"
+                return L10n.tr("Day %lld", Int64(number))
             case .night(let number):
-                return "Night \(number)"
+                return L10n.tr("Night %lld", Int64(number))
             }
         }
 
         var nextTitle: String {
             switch self {
             case .firstNight:
-                return "Day 1"
+                return L10n.tr("Day 1")
             case .day(let number):
-                return "Night \(number + 1)"
+                return L10n.tr("Night %lld", Int64(number + 1))
             case .night(let number):
-                return "Day \(number)"
+                return L10n.tr("Day %lld", Int64(number))
             }
         }
     }
@@ -123,11 +123,11 @@ struct Game: Codable {
     }
 
     var currentPhaseTitle: String {
-        currentPhase?.title ?? "Setup"
+        currentPhase?.title ?? L10n.tr("Setup")
     }
 
     var nextPhaseTitle: String {
-        currentPhase?.nextTitle ?? "First Night"
+        currentPhase?.nextTitle ?? L10n.tr("First Night")
     }
 
     mutating func startChronicleIfNeeded() {
@@ -182,14 +182,14 @@ struct Game: Codable {
     func phaseTimeline() -> [(title: String, note: String)] {
         inGameNote.enumerated().map { index, note in
             if index == 0 {
-                return ("First Night", note)
+                return (L10n.tr("First Night"), note)
             }
 
             if (index + 1).isMultiple(of: 2) {
-                return ("Day \(index / 2 + 1)", note)
+                return (L10n.tr("Day %lld", Int64(index / 2 + 1)), note)
             }
 
-            return ("Night \(index / 2 + 2)", note)
+            return (L10n.tr("Night %lld", Int64(index / 2 + 2)), note)
         }
     }
 }

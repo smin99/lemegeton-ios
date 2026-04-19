@@ -18,29 +18,29 @@ struct BoardView: View {
         var title: String {
             switch self {
             case .resetBoard:
-                "Reset the Grimoire?"
+                L10n.tr("Reset the Grimoire?")
             case .cannotStartGame:
-                "Cannot begin the chronicle"
+                L10n.tr("Cannot begin the chronicle")
             case .cannotEndGame,
                     .completeGame:
-                "Finish the game?"
+                L10n.tr("Finish the game?")
             case .resetAfterCompleteGame:
-                "Restart with same board?"
+                L10n.tr("Restart with same board?")
             }
         }
         
         var message: String {
             switch self {
             case .resetBoard:
-                "This will clear all player seats and roles. This action cannot be undone."
+                L10n.tr("This will clear all player seats and roles. This action cannot be undone.")
             case .cannotStartGame:
-                "Select at least as many characters as there are seats before starting the game."
+                L10n.tr("Select at least as many characters as there are seats before starting the game.")
             case .cannotEndGame:
-                "The game has not ended. Please record all player's characters and update their death state."
+                L10n.tr("The game has not ended. Please record all player's characters and update their death state.")
             case .completeGame:
-                "This will end the game. Ended game cannot be started again."
+                L10n.tr("This will end the game. Ended game cannot be started again.")
             case .resetAfterCompleteGame:
-                "Restart will keep the current board setup including player name and seats."
+                L10n.tr("Restart will keep the current board setup including player name and seats.")
             }
         }
     }
@@ -218,7 +218,7 @@ struct BoardView: View {
                 }
             }
             .sheet(isPresented: $showCharacterSheet) {
-                CharacterListView(titleText: "Add characters in game", onComplete: { characters in
+                CharacterListView(titleText: L10n.tr("Add characters in game"), onComplete: { characters in
                     boardVM.setUpCharacters(characters: Array(characters).sorted(by: { $0.type.rawValue < $1.type.rawValue }))
                     showCharacterSheet = false
                 }, allCharacters: boardVM.allCharacters, includeScenario: true, maxSelectionCount: nil, selectedCharacters: Set(boardVM.currentGame.inGameCharacters))
@@ -230,8 +230,8 @@ struct BoardView: View {
                         boardVM.updateCurrentPhaseNote(note)
                         showPhaseNoteSheet = false
                     },
-                    buttonTitle: "Save Note",
-                    placeholder: "Write what happened during this phase",
+                    buttonTitle: L10n.tr("Save Note"),
+                    placeholder: L10n.tr("Write what happened during this phase"),
                     note: boardVM.currentGame.currentPhaseNote()
                 )
             }
@@ -248,7 +248,7 @@ struct BoardView: View {
             .toolbarBackgroundVisibility(.visible, for: .tabBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text(boardVM.currentGame.gameState == .set_up ? "Set up the Grimoire" : "\(boardVM.currentGame.numAliveCharacters()) Alive")
+                    Text(boardVM.currentGame.gameState == .set_up ? L10n.tr("Set up the Grimoire") : L10n.tr("%lld Alive", Int64(boardVM.currentGame.numAliveCharacters())))
                         .grimoireBoldStyle(size: 18)
                         .tracking(2)
                 }
@@ -438,28 +438,33 @@ private struct PlayerExplanation {
     
     var playerName: String {
         let trimmed = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Unnamed player" : trimmed
+        return trimmed.isEmpty ? L10n.tr("Unnamed player") : trimmed
     }
     
     var claimSummary: String {
         guard let claimed = seat.player.character else {
-            return "No claimed role recorded"
+            return L10n.tr("No claimed role recorded")
         }
         if evidence.actorEvents.isEmpty {
-            return "Claiming \(claimed.name)"
+            return L10n.tr("Claiming %@", claimed.localizedName)
         }
-        return "Claiming \(claimed.name) · \(evidence.actorEvents.count) logged action\(evidence.actorEvents.count == 1 ? "" : "s")"
+        return L10n.tr(
+            "Claiming %@ · %lld logged action%@",
+            claimed.localizedName,
+            Int64(evidence.actorEvents.count),
+            evidence.actorEvents.count == 1 ? "" : "s"
+        )
     }
     
     var primaryExplanation: String {
         guard let claimed = seat.player.character else {
             if let deathContext = evidence.deathContext {
-                return "This player has no recorded claim. The chronicle shows \(deathContext), which still fits a hidden good role, an Outsider avoiding attention, or an evil player who never had to settle on a public bluff."
+                return L10n.tr("This player has no recorded claim. The chronicle shows %@, which still fits a hidden good role, an Outsider avoiding attention, or an evil player who never had to settle on a public bluff.", deathContext)
             }
             if seat.player.isDead {
-                return "This player has no recorded claim and is already dead, which can still fit a hidden information role, an Outsider staying quiet, or an evil player who never needed to publicly settle on a bluff."
+                return L10n.tr("This player has no recorded claim and is already dead, which can still fit a hidden information role, an Outsider staying quiet, or an evil player who never needed to publicly settle on a public bluff.")
             }
-            return "This player has no recorded claim yet. In Blood on the Clocktower, that can still make sense for cautious information roles, Outsiders who prefer to hide, or evil players delaying a bluff."
+            return L10n.tr("This player has no recorded claim yet. In Blood on the Clocktower, that can still make sense for cautious information roles, Outsiders who prefer to hide, or evil players delaying a bluff.")
         }
         
         if let contradiction = contradictionSummary(for: claimed) {
@@ -472,13 +477,13 @@ private struct PlayerExplanation {
         
         switch claimed.type {
         case .townsfolk:
-            return "A Townsfolk explanation is still possible, but it currently relies more on social read than on a fully consistent action trail in the chronicle."
+            return L10n.tr("A Townsfolk explanation is still possible, but it currently relies more on social read than on a fully consistent action trail in the chronicle.")
         case .outsider:
-            return "An Outsider explanation remains plausible because Outsider stories often look messy or incomplete, but the chronicle does not yet strongly anchor this player to one specific outcome."
+            return L10n.tr("An Outsider explanation remains plausible because Outsider stories often look messy or incomplete, but the chronicle does not yet strongly anchor this player to one specific outcome.")
         case .minion:
-            return "A Minion explanation stays open if this claim looks more like pressure or misinformation than a truthful public role, especially if the action trail is thin."
+            return L10n.tr("A Minion explanation stays open if this claim looks more like pressure or misinformation than a truthful public role, especially if the action trail is thin.")
         case .demon:
-            return "A Demon explanation is only moderately supported right now. It becomes stronger if the kill pattern, pressure, and bluff line keep pointing back to this seat."
+            return L10n.tr("A Demon explanation is only moderately supported right now. It becomes stronger if the kill pattern, pressure, and bluff line keep pointing back to this seat.")
         }
     }
     
@@ -487,7 +492,7 @@ private struct PlayerExplanation {
         
         if let claimed = seat.player.character {
             if seat.player.isCharacterConfirmed {
-                details.append("This seat is already marked confirmed as \(claimed.name).")
+                details.append(L10n.tr("This seat is already marked confirmed as %@.", claimed.localizedName))
             }
             
             if let cadence = cadenceDetail(for: claimed) {
@@ -499,29 +504,35 @@ private struct PlayerExplanation {
             }
             
             if claimed.supportedAbility != nil, seat.player.activeAbilityTargetSeatID != nil, evidence.actorEvents.isEmpty {
-                details.append("A target is stored on this seat, but the chronicle does not yet include a matching public action record.")
+                details.append(L10n.tr("A target is stored on this seat, but the chronicle does not yet include a matching public action record."))
             }
         }
         
         if !seat.player.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            details.append("There is a private note on this player, which may support or weaken the claim depending on what you recorded.")
+            details.append(L10n.tr("There is a private note on this player, which may support or weaken the claim depending on what you recorded."))
         }
         
         if let deathContext = evidence.deathContext {
-            details.append("Chronicle timing: \(deathContext).")
+            details.append(L10n.tr("Chronicle timing: %@.", deathContext))
         }
         
         if seat.player.isDead, let claimed = seat.player.character {
             switch claimed.type {
             case .townsfolk, .outsider:
-                details.append("Death does not hurt this explanation by itself; dangerous good roles and harmful Outsiders often die early.")
+                details.append(L10n.tr("Death does not hurt this explanation by itself; dangerous good roles and harmful Outsiders often die early."))
             case .minion, .demon:
-                details.append("Death could still fit a frame job, a spent evil role, or a bluff collapsing under pressure rather than proving the evil claim.")
+                details.append(L10n.tr("Death could still fit a frame job, a spent evil role, or a bluff collapsing under pressure rather than proving the evil claim."))
             }
         }
         
         if evidence.targetedByAttacksAfterClaims > 0 {
-            details.append("Other players' logged actions point at this seat \(evidence.targetedByAttacksAfterClaims) time\(evidence.targetedByAttacksAfterClaims == 1 ? "" : "s"), which can matter when evaluating whether this player was attracting night attention.")
+            details.append(
+                L10n.tr(
+                    "Other players' logged actions point at this seat %lld time%@, which can matter when evaluating whether this player was attracting night attention.",
+                    Int64(evidence.targetedByAttacksAfterClaims),
+                    evidence.targetedByAttacksAfterClaims == 1 ? "" : "s"
+                )
+            )
         }
         
         return details.isEmpty ? nil : details.joined(separator: " ")
@@ -533,31 +544,31 @@ private struct PlayerExplanation {
         let alternatives = game.inGameCharacters
             .filter { $0.type == claimed.type && $0.id != claimed.id }
             .prefix(3)
-            .map(\.name)
+            .map(\.localizedName)
         
         guard !alternatives.isEmpty else { return nil }
-        return "Other same-type explanations in this script: \(alternatives.joined(separator: ", "))."
+        return L10n.tr("Other same-type explanations in this script: %@.", alternatives.joined(separator: ", "))
     }
     
     private func contradictionSummary(for claimed: Character) -> String? {
         guard let ability = claimed.supportedAbility else { return nil }
         
         if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.count > 1 {
-            return "This explanation is weak because \(claimed.name) is effectively a one-use claim here, but the chronicle logs \(evidence.actorEvents.count) separate claimed uses."
+            return L10n.tr("This explanation is weak because %@ is effectively a one-use claim here, but the chronicle logs %lld separate claimed uses.", claimed.localizedName, Int64(evidence.actorEvents.count))
         }
         
         if PlayerRoleRule.deathTriggeredAbilities.contains(ability), !evidence.actorEvents.isEmpty {
             guard let firstDeathPhaseIndex = evidence.firstDeathPhaseIndex else {
-                return "This explanation is weak because \(claimed.name) normally needs the player to die before acting, but the chronicle shows a claimed use without any recorded death."
+                return L10n.tr("This explanation is weak because %@ normally needs the player to die before acting, but the chronicle shows a claimed use without any recorded death.", claimed.localizedName)
             }
             
             if let earliestUse = evidence.actorEvents.map(\.phaseIndex).min(), earliestUse < firstDeathPhaseIndex {
-                return "This explanation is weak because the chronicle shows the claimed \(claimed.name) action before this player’s recorded death."
+                return L10n.tr("This explanation is weak because the chronicle shows the claimed %@ action before this player’s recorded death.", claimed.localizedName)
             }
         }
         
         if ability == .professorResurrect, evidence.hasInvalidProfessorResurrection {
-            return "This explanation is weak because the claimed Professor resurrected a player who was not recorded as dead earlier in the chronicle."
+            return L10n.tr("This explanation is weak because the claimed Professor resurrected a player who was not recorded as dead earlier in the chronicle.")
         }
         
         return nil
@@ -566,7 +577,7 @@ private struct PlayerExplanation {
     private func strongSupportSummary(for claimed: Character) -> String? {
         guard let ability = claimed.supportedAbility else {
             if claimed.type == .outsider {
-                return "An Outsider explanation is logical here because Outsider stories often stay incomplete, and the absence of a strong action trail is not itself suspicious."
+                return L10n.tr("An Outsider explanation is logical here because Outsider stories often stay incomplete, and the absence of a strong action trail is not itself suspicious.")
             }
             return nil
         }
@@ -574,11 +585,11 @@ private struct PlayerExplanation {
         if PlayerRoleRule.nightlyAbilities.contains(ability),
            evidence.eligibleNightCount >= 2,
            evidence.nightActionCount >= max(1, evidence.eligibleNightCount - 1) {
-            return "This explanation is fairly strong because the chronicle shows a repeated \(claimed.name) action pattern across the nights this player stayed alive."
+            return L10n.tr("This explanation is fairly strong because the chronicle shows a repeated %@ action pattern across the nights this player stayed alive.", claimed.localizedName)
         }
         
         if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.count == 1 {
-            return "This explanation is fairly strong because the chronicle shows a single claimed \(claimed.name) use, which matches the expected once-per-game pattern."
+            return L10n.tr("This explanation is fairly strong because the chronicle shows a single claimed %@ use, which matches the expected once-per-game pattern.", claimed.localizedName)
         }
         
         if PlayerRoleRule.deathTriggeredAbilities.contains(ability),
@@ -586,12 +597,12 @@ private struct PlayerExplanation {
            let firstDeathPhaseIndex = evidence.firstDeathPhaseIndex,
            let usePhaseIndex = evidence.actorEvents.first?.phaseIndex,
            usePhaseIndex >= firstDeathPhaseIndex {
-            return "This explanation is fairly strong because the chronicle shows the claimed \(claimed.name) action only after this player’s recorded death."
+            return L10n.tr("This explanation is fairly strong because the chronicle shows the claimed %@ action only after this player’s recorded death.", claimed.localizedName)
         }
         
         if ability == .monkProtect || ability == .innkeeperProtect || ability == .devilsAdvocateProtect,
            evidence.actorEvents.count > 0 {
-            return "This explanation is reasonably logical because the chronicle contains a concrete protection story for this player instead of only a bare role claim."
+            return L10n.tr("This explanation is reasonably logical because the chronicle contains a concrete protection story for this player instead of only a bare role claim.")
         }
         
         return nil
@@ -602,15 +613,21 @@ private struct PlayerExplanation {
         
         if PlayerRoleRule.nightlyAbilities.contains(ability), evidence.eligibleNightCount >= 2 {
             if evidence.nightActionCount == 0 {
-                return "Chronicle cross-check: this claim usually wants recurring night entries, but none were logged across \(evidence.eligibleNightCount) eligible night\(evidence.eligibleNightCount == 1 ? "" : "s")."
+                return L10n.tr("Chronicle cross-check: this claim usually wants recurring night entries, but none were logged across %lld eligible night%@.", Int64(evidence.eligibleNightCount), evidence.eligibleNightCount == 1 ? "" : "s")
             }
             if evidence.nightActionCount < evidence.eligibleNightCount - 1 {
-                return "Chronicle cross-check: only \(evidence.nightActionCount) night action\(evidence.nightActionCount == 1 ? "" : "s") were logged across \(evidence.eligibleNightCount) eligible night\(evidence.eligibleNightCount == 1 ? "" : "s"), so the action trail is incomplete."
+                return L10n.tr(
+                    "Chronicle cross-check: only %lld night action%@ were logged across %lld eligible night%@, so the action trail is incomplete.",
+                    Int64(evidence.nightActionCount),
+                    evidence.nightActionCount == 1 ? "" : "s",
+                    Int64(evidence.eligibleNightCount),
+                    evidence.eligibleNightCount == 1 ? "" : "s"
+                )
             }
         }
         
         if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.isEmpty {
-            return "Chronicle cross-check: there is not yet any logged use for this one-shot claim, so it remains mostly social rather than mechanical."
+            return L10n.tr("Chronicle cross-check: there is not yet any logged use for this one-shot claim, so it remains mostly social rather than mechanical.")
         }
         
         return nil
@@ -620,17 +637,17 @@ private struct PlayerExplanation {
         guard let ability = claimed.supportedAbility else { return nil }
         
         if ability == .professorResurrect, let invalidTarget = evidence.invalidProfessorTargetName {
-            return "Target cross-check: the claimed resurrection of \(invalidTarget) does not line up with an earlier recorded death."
+            return L10n.tr("Target cross-check: the claimed resurrection of %@ does not line up with an earlier recorded death.", invalidTarget)
         }
         
         if PlayerRoleRule.protectionAbilities.contains(ability), evidence.protectedTargetsThatLaterDied.count > 0 {
             let targets = evidence.protectedTargetsThatLaterDied.joined(separator: ", ")
-            return "Target cross-check: protected target\(evidence.protectedTargetsThatLaterDied.count == 1 ? "" : "s") \(targets) later died in the chronicle, so this story needs poisoning, drunkenness, a bypass, or a false claim to stay coherent."
+            return L10n.tr("Target cross-check: protected target%@ %@ later died in the chronicle, so this story needs poisoning, drunkenness, a bypass, or a false claim to stay coherent.", evidence.protectedTargetsThatLaterDied.count == 1 ? "" : "s", targets)
         }
         
         if PlayerRoleRule.attackAbilities.contains(ability), evidence.attackTargetsWithNoLaterDeath.count > 0 {
             let targets = evidence.attackTargetsWithNoLaterDeath.prefix(2).joined(separator: ", ")
-            return "Target cross-check: claimed attack target\(evidence.attackTargetsWithNoLaterDeath.count == 1 ? "" : "s") \(targets) have no later recorded death, which does not disprove the claim but does weaken a straightforward kill story."
+            return L10n.tr("Target cross-check: claimed attack target%@ %@ have no later recorded death, which does not disprove the claim but does weaken a straightforward kill story.", evidence.attackTargetsWithNoLaterDeath.count == 1 ? "" : "s", targets)
         }
         
         return nil
@@ -672,7 +689,7 @@ private struct PlayerChronicleEvidence {
     
     private var playerName: String {
         let trimmed = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Unnamed player" : trimmed
+        return trimmed.isEmpty ? L10n.tr("Unnamed player") : trimmed
     }
     
     private var phaseEntries: [PhaseEntry] {
@@ -708,7 +725,7 @@ private struct PlayerChronicleEvidence {
         guard let death = phaseEntries.first(where: { $0.line == "\(playerName) died." }) else {
             return nil
         }
-        return "their death was recorded during \(death.phaseTitle)"
+        return L10n.tr("their death was recorded during %@", death.phaseTitle)
     }
     
     var eligibleNightCount: Int {
@@ -716,8 +733,7 @@ private struct PlayerChronicleEvidence {
         var count = 0
         
         for index in game.phaseTimeline().indices {
-            let title = game.phaseTimeline()[index].title
-            if title == "First Night" || title.hasPrefix("Night ") {
+            if index == 0 || index.isMultiple(of: 2) == false {
                 if alive {
                     count += 1
                 }
@@ -809,6 +825,6 @@ private struct PhaseEntry {
     let line: String
     
     var isNightPhase: Bool {
-        phaseTitle == "First Night" || phaseTitle.hasPrefix("Night ")
+        phaseIndex == 0 || phaseIndex.isMultiple(of: 2) == false
     }
 }
