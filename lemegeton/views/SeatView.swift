@@ -12,6 +12,9 @@ private let SEAT_SIZE: CGFloat = 60
 struct SeatView: View {
     @Binding var seat: Seat
     @StateObject var boardVM: BoardViewModel
+    var boardSize: CGSize = .zero
+    var allSeats: [Seat] = []
+    var onSnapGuideChanged: (SeatSnapGuide) -> Void = { _ in }
     
     @State private var showNoteEditor = false
     @State private var showCharacterList = false
@@ -20,7 +23,13 @@ struct SeatView: View {
     
     var body: some View {
         if boardVM.currentGame.gameState == .set_up {
-            SetupSeatView(seat: $seat, boardVM: boardVM)
+            SetupSeatView(
+                seat: $seat,
+                boardVM: boardVM,
+                boardSize: boardSize,
+                allSeats: allSeats,
+                onSnapGuideChanged: onSnapGuideChanged
+            )
         } else {
             VStack {
                 ZStack {
@@ -244,11 +253,20 @@ struct SeatView: View {
 private struct SetupSeatView: View {
     @Binding var seat: Seat
     @StateObject var boardVM: BoardViewModel
+    let boardSize: CGSize
+    let allSeats: [Seat]
+    let onSnapGuideChanged: (SeatSnapGuide) -> Void
     
     @State private var dragOffset: CGSize = .zero
     
+    private let alignmentThreshold: CGFloat = 18
+    private let circleThreshold: CGFloat = 22
+    private let seatPadding: CGFloat = SEAT_SIZE / 2
+    private let seatSpacing: CGFloat = 8
+    private let nameFieldHeight: CGFloat = 30
+    
     var body: some View {
-        VStack {
+        VStack(spacing: seatSpacing) {
             ZStack(alignment: .topTrailing) {
                 CircleImageView(character: $seat.player.character, isDead: $seat.player.isDead)
 
@@ -274,7 +292,7 @@ private struct SetupSeatView: View {
             )
             .foregroundStyle(.themeOnSurface)
             .background(Color.themeSurface)
-            .frame(width: SEAT_SIZE)
+            .frame(width: SEAT_SIZE, height: nameFieldHeight)
             .keyboardShortcut(.defaultAction)
             .multilineTextAlignment(.center)
         }
@@ -282,14 +300,115 @@ private struct SetupSeatView: View {
         .gesture(
             DragGesture()
                 .onChanged { value in
-                    dragOffset = value.translation
+                    let snapped = snappedResult(for: CGPoint(
+                        x: seat.x + value.translation.width,
+                        y: seat.y + value.translation.height
+                    ))
+                    dragOffset = CGSize(
+                        width: snapped.position.x - seat.x,
+                        height: snapped.position.y - seat.y
+                    )
+                    onSnapGuideChanged(snapped.guide)
                 }
                 .onEnded { value in
-                    seat.x += value.translation.width
-                    seat.y += value.translation.height
+                    let snapped = snappedResult(for: CGPoint(
+                        x: seat.x + value.translation.width,
+                        y: seat.y + value.translation.height
+                    ))
+                    seat.x = snapped.position.x
+                    seat.y = snapped.position.y
                     dragOffset = .zero
+                    onSnapGuideChanged(SeatSnapGuide())
                 }
         )
+    }
+    
+    private func snappedResult(for rawPosition: CGPoint) -> (position: CGPoint, guide: SeatSnapGuide) {
+        let rawCircleCenter = CGPoint(
+            x: rawPosition.x,
+            y: rawPosition.y + circleCenterYOffset
+        )
+        var clampedCircleCenter = CGPoint(
+            x: min(max(rawCircleCenter.x, seatPadding), max(boardSize.width - seatPadding, seatPadding)),
+            y: min(max(rawCircleCenter.y, seatPadding), max(boardSize.height - seatPadding, seatPadding))
+        )
+        
+        let neighboringSeats = allSeats.filter { $0.id != seat.id }
+        let snappedX = nearestCoordinate(
+            to: clampedCircleCenter.x,
+            candidates: neighboringSeats.map(\.x),
+            threshold: alignmentThreshold
+        )
+        let snappedY = nearestCoordinate(
+            to: clampedCircleCenter.y,
+            candidates: neighboringSeats.map { $0.y + circleCenterYOffset },
+            threshold: alignmentThreshold
+        )
+        
+        clampedCircleCenter.x = snappedX ?? clampedCircleCenter.x
+        clampedCircleCenter.y = snappedY ?? clampedCircleCenter.y
+        var guide = SeatSnapGuide(
+            verticalX: snappedX,
+            horizontalY: snappedY,
+            circleRadius: nil
+        )
+        
+        if snappedX == nil && snappedY == nil,
+           let radius = nearestCircleRadius(
+            to: clampedCircleCenter,
+            neighboringSeats: neighboringSeats,
+            center: boardCenter,
+            threshold: circleThreshold
+           ) {
+            let angle = atan2(clampedCircleCenter.y - boardCenter.y, clampedCircleCenter.x - boardCenter.x)
+            clampedCircleCenter = CGPoint(
+                x: boardCenter.x + cos(angle) * radius,
+                y: boardCenter.y + sin(angle) * radius
+            )
+            clampedCircleCenter.x = min(max(clampedCircleCenter.x, seatPadding), max(boardSize.width - seatPadding, seatPadding))
+            clampedCircleCenter.y = min(max(clampedCircleCenter.y, seatPadding), max(boardSize.height - seatPadding, seatPadding))
+            guide.circleRadius = radius
+        }
+        
+        let snappedPosition = CGPoint(
+            x: clampedCircleCenter.x,
+            y: clampedCircleCenter.y - circleCenterYOffset
+        )
+        
+        return (snappedPosition, guide)
+    }
+    
+    private func nearestCoordinate(to value: CGFloat, candidates: [CGFloat], threshold: CGFloat) -> CGFloat? {
+        candidates
+            .map { candidate in (candidate: candidate, distance: abs(candidate - value)) }
+            .filter { $0.distance <= threshold }
+            .min(by: { $0.distance < $1.distance })?
+            .candidate
+    }
+    
+    private func nearestCircleRadius(
+        to position: CGPoint,
+        neighboringSeats: [Seat],
+        center: CGPoint,
+        threshold: CGFloat
+    ) -> CGFloat? {
+        let positionRadius = hypot(position.x - center.x, position.y - center.y)
+        return neighboringSeats
+            .map { neighboringSeat in
+                hypot(neighboringSeat.x - center.x, neighboringSeat.y - center.y)
+            }
+            .map { radius in (radius: radius, distance: abs(radius - positionRadius)) }
+            .filter { $0.distance <= threshold }
+            .min(by: { $0.distance < $1.distance })?
+            .radius
+    }
+    
+    private var boardCenter: CGPoint {
+        CGPoint(x: boardSize.width / 2, y: boardSize.height / 2)
+    }
+    
+    private var circleCenterYOffset: CGFloat {
+        -((seatSpacing + nameFieldHeight) / 2)
     }
 }
 
