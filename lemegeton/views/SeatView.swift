@@ -18,6 +18,7 @@ struct SeatView: View {
     
     @State private var showNoteEditor = false
     @State private var showCharacterList = false
+    @State private var showRevealedCharacterList = false
     @State private var showEditNameSheet = false
     @State private var activeAbilitySheet: SupportedAbility?
     
@@ -31,7 +32,7 @@ struct SeatView: View {
                 onSnapGuideChanged: onSnapGuideChanged
             )
         } else {
-            VStack {
+            VStack(spacing: 4) {
                 ZStack {
                     Menu {
                         Button(action: {
@@ -41,6 +42,26 @@ struct SeatView: View {
                                 "Claimed Role",
                                 systemImage: "person.fill.questionmark"
                             )
+                        }
+                        if boardVM.currentGame.gameState == .role_reveal {
+                            Button(action: {
+                                showRevealedCharacterList = true
+                            }) {
+                                Label(
+                                    "Revealed Role",
+                                    systemImage: "person.fill.checkmark"
+                                )
+                            }
+                            if let claimedCharacter = seat.player.character {
+                                Button(action: {
+                                    boardVM.updateRevealedRole(seat: seat, character: claimedCharacter)
+                                }) {
+                                    Label(
+                                        "Reveal Same as Claim",
+                                        systemImage: "checkmark.circle"
+                                    )
+                                }
+                            }
                         }
                         if let ability = seat.player.character?.supportedAbility {
                             Button(action: {
@@ -130,6 +151,31 @@ struct SeatView: View {
                             )
                         )
                     }
+                    .sheet(isPresented: $showRevealedCharacterList) {
+                        CharacterListView(
+                            titleText: L10n.tr("Reveal %@'s role", seat.player.name),
+                            onComplete: { characters in
+                                boardVM.updateRevealedRole(
+                                    seat: seat,
+                                    character: Array(characters).first
+                                )
+                                showRevealedCharacterList = false
+                            },
+                            allCharacters: boardVM.currentGame.inGameCharacters
+                                .sorted(by: {
+                                    if $0.type < $1.type {
+                                        true
+                                    } else {
+                                        $0.id < $1.id
+                                    }
+                                }),
+                            includeScenario: false,
+                            maxSelectionCount: 1,
+                            selectedCharacters: Set(
+                                seat.player.revealedCharacter.map { [$0] } ?? []
+                            )
+                        )
+                    }
                     .sheet(item: $activeAbilitySheet) { ability in
                         AbilityActionSheet(
                             ability: ability,
@@ -163,6 +209,26 @@ struct SeatView: View {
                         .foregroundStyle(seat.player.isDead ? .gray : .themeOnSurface)
                         .strikethrough(seat.player.isDead, color: .themeTertiary)
                 }
+
+                if let learnedRoleName = seat.player.learnedCharacter?.localizedName {
+                    Text(L10n.tr("Learned: %@.", learnedRoleName))
+                        .font(.caption2)
+                        .frame(width: 96)
+                        .foregroundStyle(.themePrimary.opacity(0.88))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+
+                if let revealedRoleName = seat.player.revealedCharacter?.localizedName {
+                    Text(L10n.tr("Revealed: %@.", revealedRoleName))
+                        .font(.caption2)
+                        .frame(width: 96)
+                        .foregroundStyle(.themeOnSurface.opacity(0.78))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
             }
             .position(x: seat.x, y: seat.y)
         }
@@ -193,6 +259,7 @@ struct SeatView: View {
     private func availableTargets(for ability: SupportedAbility) -> [Seat] {
         switch ability.input {
         case let .players(_, _, excludeSelf, aliveOnly, deadOnly),
+                let .playersAndYesNo(_, excludeSelf, aliveOnly, deadOnly, _),
                 let .playerAndCharacter(excludeSelf, aliveOnly, deadOnly, _),
                 let .playersAndCharacter(_, excludeSelf, aliveOnly, deadOnly, _),
                 let .playerAndTwoCharacters(excludeSelf, aliveOnly, deadOnly, _, _),
@@ -209,7 +276,7 @@ struct SeatView: View {
                 }
                 return true
             }
-        case .text, .character:
+        case .text, .number, .yesNo, .character:
             return []
         }
     }
@@ -230,7 +297,7 @@ struct SeatView: View {
             return sortedCharacters.filter(characterScope.includes(_:))
         case let .playerAndTwoCharacters(_, _, _, firstCharacterScope, secondCharacterScope):
             return sortedCharacters.filter { firstCharacterScope.includes($0) || secondCharacterScope.includes($0) }
-        case .text, .players:
+        case .text, .number, .yesNo, .players, .playersAndYesNo:
             return sortedCharacters
         }
     }
@@ -241,12 +308,34 @@ struct SeatView: View {
             return
         }
 
+        switch (ability, selection) {
+        case let (.undertakerInfo, .playerAndCharacter(player, character)),
+             let (.ravenkeeperCheck, .playerAndCharacter(player, character)),
+             let (.grandmotherInfo, .playerAndCharacter(player, character)):
+            boardVM.updateLearnedRole(seat: player, character: character)
+        default:
+            break
+        }
+
         let actorName = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.tr("Unnamed player") : seat.player.name
         guard let summary = ability.chronicleSummary(actorName: actorName, selection: selection) else {
             return
         }
 
         boardVM.recordClaimedAbility(seat: seat, summary: summary)
+
+        switch (ability, selection) {
+        case let (.slayerShot, .playersAndYesNo(players, true)),
+             let (.virginTrigger, .playersAndYesNo(players, true)):
+            if let target = players.first,
+               let targetIndex = boardVM.currentGame.seats.firstIndex(where: { $0.id == target.id }),
+               !boardVM.currentGame.seats[targetIndex].player.isDead {
+                boardVM.currentGame.seats[targetIndex].player.isDead = true
+                boardVM.saveState()
+            }
+        default:
+            break
+        }
     }
 }
 
@@ -462,6 +551,23 @@ private struct AbilityActionSheet: View {
                 placeholder: placeholder,
                 note: ""
             )
+        case let .number(placeholder):
+            NumberTakeView(
+                title: sheetTitle,
+                onComplete: { value in
+                    onSubmit(.number(value))
+                },
+                buttonTitle: L10n.tr("Record"),
+                placeholder: placeholder
+            )
+        case let .yesNo(prompt):
+            YesNoAbilityView(
+                title: sheetTitle,
+                prompt: prompt,
+                onSubmit: { value in
+                    onSubmit(.yesNo(value))
+                }
+            )
         case let .players(minSelectionCount, maxSelectionCount, _, _, _):
             PlayerSelectionAbilityView(
                 title: sheetTitle,
@@ -471,6 +577,16 @@ private struct AbilityActionSheet: View {
                 selectedSeatIDs: selectedSeatIDs,
                 onSubmit: { selectedSeats in
                     onSubmit(.players(selectedSeats))
+                }
+            )
+        case let .playersAndYesNo(playerCount, _, _, _, prompt):
+            PlayersAndYesNoAbilityView(
+                title: sheetTitle,
+                prompt: prompt,
+                seats: seats,
+                playerCount: playerCount,
+                onSubmit: { selectedSeats, value in
+                    onSubmit(.playersAndYesNo(players: selectedSeats, value: value))
                 }
             )
         case .playerAndCharacter:
@@ -525,6 +641,197 @@ private struct AbilityActionSheet: View {
 
     private var sheetTitle: String {
         sourceSeat.player.name.isEmpty ? ability.menuTitle : L10n.tr("%@: %@", sourceSeat.player.name, ability.menuTitle)
+    }
+}
+
+private struct NumberTakeView: View {
+    let title: String
+    let onComplete: (Int) -> Void
+    let buttonTitle: String
+    let placeholder: String
+
+    @State private var numberText = ""
+    @FocusState private var keyboardFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(title)
+                    .grimoireBoldStyle(size: 20)
+                    .foregroundStyle(.themeOnSurface)
+
+                TextField(placeholder, text: $numberText)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.numberPad)
+                    .foregroundStyle(.themeOnSurface)
+                    .tint(.themePrimary)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.themeSurface.opacity(0.94))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.themePrimary.opacity(0.18), lineWidth: 1)
+                    )
+                    .overlay(alignment: .leading) {
+                        if numberText.isEmpty {
+                            Text(placeholder)
+                                .foregroundStyle(.themeOnSurface.opacity(0.58))
+                                .padding(.horizontal, 16)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .focused($keyboardFocused)
+                    .onChange(of: numberText) { _, newValue in
+                        numberText = newValue.filter(\.isNumber)
+                    }
+
+                Spacer()
+            }
+            .padding()
+            .background(Color.themeSurface)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(buttonTitle) {
+                        guard let value = Int(numberText) else {
+                            return
+                        }
+                        onComplete(value)
+                    }
+                    .disabled(Int(numberText) == nil)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    keyboardFocused = true
+                }
+            }
+        }
+    }
+}
+
+private struct YesNoAbilityView: View {
+    let title: String
+    let prompt: String
+    let onSubmit: (Bool) -> Void
+
+    @State private var value = true
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(title)
+                    .grimoireBoldStyle(size: 20)
+                    .foregroundStyle(.themeOnSurface)
+
+                Text(prompt)
+                    .font(.caption)
+                    .foregroundStyle(.themeOnSurface)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.themeSurface.opacity(0.94))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.themePrimary.opacity(0.18), lineWidth: 1)
+                    )
+
+                Picker("", selection: $value) {
+                    Text(L10n.tr("Yes")).tag(true)
+                    Text(L10n.tr("No")).tag(false)
+                }
+                .pickerStyle(.segmented)
+
+                Spacer()
+            }
+            .padding()
+            .background(Color.themeSurface)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L10n.tr("Record")) {
+                        onSubmit(value)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct PlayersAndYesNoAbilityView: View {
+    let title: String
+    let prompt: String
+    let seats: [Seat]
+    let playerCount: Int
+    let onSubmit: ([Seat], Bool) -> Void
+
+    @State private var selectedSeatIDs: Set<UUID> = []
+    @State private var value = true
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(prompt)
+                        .font(.caption)
+                        .foregroundStyle(.themeOnSurface)
+                        .padding(.vertical, 4)
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+
+                    Picker("", selection: $value) {
+                        Text(L10n.tr("Yes")).tag(true)
+                        Text(L10n.tr("No")).tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color(.themeSurface).opacity(0.92))
+                }
+
+                Section {
+                    ForEach(seats) { targetSeat in
+                        Button {
+                            toggle(targetSeat)
+                        } label: {
+                            AbilitySeatRow(
+                                seat: targetSeat,
+                                isSelected: selectedSeatIDs.contains(targetSeat.id)
+                            )
+                        }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
+                    }
+                } header: {
+                    Text(L10n.tr("Players"))
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.themeSurface))
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L10n.tr("Record")) {
+                        let selectedSeats = seats.filter { selectedSeatIDs.contains($0.id) }
+                        onSubmit(selectedSeats, value)
+                    }
+                    .disabled(selectedSeatIDs.count != playerCount)
+                }
+            }
+        }
+    }
+
+    private func toggle(_ seat: Seat) {
+        if selectedSeatIDs.contains(seat.id) {
+            selectedSeatIDs.remove(seat.id)
+            return
+        }
+
+        if selectedSeatIDs.count < playerCount {
+            selectedSeatIDs.insert(seat.id)
+        }
     }
 }
 
@@ -614,6 +921,7 @@ private struct PlayerAndCharacterAbilityView: View {
                                 isSelected: selectedSeatID == targetSeat.id
                             )
                         }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
                     }
                 }
 
@@ -622,16 +930,12 @@ private struct PlayerAndCharacterAbilityView: View {
                         Button {
                             selectedCharacterID = character.id
                         } label: {
-                            HStack {
-                                Text(character.localizedName)
-                                    .foregroundStyle(.themeOnSurface)
-                                Spacer()
-                                if selectedCharacterID == character.id {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.themePrimary)
-                                }
-                            }
+                            CharacterSelectionRow(
+                                character: character,
+                                isSelected: selectedCharacterID == character.id
+                            )
                         }
+                        .listRowBackground(Color(.themeSurface).opacity(0.92))
                     }
                 }
             }
@@ -965,9 +1269,21 @@ private struct AbilitySeatRow: View {
                     .foregroundStyle(.themeOnSurface)
 
                 if let roleName = seat.player.character?.localizedName {
-                    Text(roleName)
+                    Text(L10n.tr("Claim: %@.", roleName))
                         .font(.caption)
                         .foregroundStyle(.themePrimary.opacity(0.75))
+                }
+
+                if let learnedRoleName = seat.player.learnedCharacter?.localizedName {
+                    Text(L10n.tr("Learned: %@.", learnedRoleName))
+                        .font(.caption)
+                        .foregroundStyle(.themePrimary.opacity(0.72))
+                }
+
+                if let revealedRoleName = seat.player.revealedCharacter?.localizedName {
+                    Text(L10n.tr("Revealed: %@.", revealedRoleName))
+                        .font(.caption)
+                        .foregroundStyle(.themeOnSurface.opacity(0.72))
                 }
             }
 

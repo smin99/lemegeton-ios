@@ -39,7 +39,7 @@ struct Game: Codable {
     }
     
     enum GameState: Codable {
-        case set_up, in_game, game_over
+        case set_up, in_game, role_reveal, game_over
     }
     
     // MARK: Game Stat related Properties
@@ -75,6 +75,10 @@ struct Game: Codable {
     
     func isAllCharacterConfirmed() -> Bool {
         return seats.map(\.player.character).allSatisfy { $0 != nil }
+    }
+
+    func isAllRevealedCharacterRecorded() -> Bool {
+        !seats.isEmpty && seats.map(\.player.revealedCharacter).allSatisfy { $0 != nil }
     }
     
     func didAllDemonDie() -> Bool {

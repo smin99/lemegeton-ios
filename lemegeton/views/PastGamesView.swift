@@ -280,7 +280,27 @@ private struct ReadOnlySeatView: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.75)
             }
+
+            if let learnedRoleName = seat.player.learnedCharacter?.localizedName {
+                Text(L10n.tr("Learned: %@.", learnedRoleName))
+                    .frame(width: seatSize + 24)
+                    .font(.caption2)
+                    .foregroundStyle(.themePrimary.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+            }
+
+            if let revealedRoleName = seat.player.revealedCharacter?.localizedName {
+                Text(L10n.tr("Revealed: %@.", revealedRoleName))
+                    .frame(width: seatSize + 24)
+                    .font(.caption2)
+                    .foregroundStyle(.themeOnSurface.opacity(0.78))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+            }
         }
-        .frame(width: seatSize, height: seatSize + 28)
+        .frame(width: seatSize + 24, height: seatSize + 72)
     }
 }

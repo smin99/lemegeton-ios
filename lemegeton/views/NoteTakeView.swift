@@ -30,11 +30,18 @@ struct NoteTakeView: View {
                 .padding()
                 .focused($keyboardFocused)
                 .scrollContentBackground(.hidden)
-                .background(.clear)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.themeSurface.opacity(0.96))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.themePrimary.opacity(0.28), lineWidth: 1)
+                )
                 .overlay(alignment: .topLeading) {
                     if note.isEmpty {
                         Text(placeholder)
-                            .foregroundStyle(.themePrimary.opacity(0.45))
+                            .foregroundStyle(.themeOnSurface.opacity(0.58))
                             .padding(.horizontal, 22)
                             .padding(.top, 24)
                             .allowsHitTesting(false)
@@ -51,7 +58,6 @@ struct NoteTakeView: View {
                 .padding()
             }
         }
-        .interactiveDismissDisabled(true)
         .padding()
         .background(Color(.themeSurface))
         .onAppear {

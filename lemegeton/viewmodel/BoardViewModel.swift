@@ -83,6 +83,16 @@ class BoardViewModel: ObservableObject {
          || currentGame.numAliveCharacters() < Game.FINAL_ALIVE_CHARACTER
          || currentGame.isOnlyEvilAlive())
     }
+
+    func beginRoleReveal() {
+        saveUndoSnapshotIfNeeded()
+        currentGame.gameState = .role_reveal
+        saveState()
+    }
+
+    func canCompleteGameAfterReveal() -> Bool {
+        currentGame.isAllRevealedCharacterRecorded()
+    }
     
     func endGame(resetGame: Bool) {
         undoStack.removeAll()
@@ -164,6 +174,25 @@ class BoardViewModel: ObservableObject {
             }
         }
 
+        saveState()
+    }
+
+    func updateRevealedRole(seat: Seat, character: Character?) {
+        guard let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) else {
+            return
+        }
+
+        saveUndoSnapshotIfNeeded()
+        currentGame.seats[idx].player.revealedCharacter = character
+        saveState()
+    }
+
+    func updateLearnedRole(seat: Seat, character: Character?) {
+        guard let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) else {
+            return
+        }
+
+        currentGame.seats[idx].player.learnedCharacter = character
         saveState()
     }
 

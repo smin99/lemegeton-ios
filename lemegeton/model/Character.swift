@@ -77,6 +77,8 @@ struct Character: Codable, Identifiable, Hashable {
             return .monkProtect
         case "trouble_brewing_009":
             return .ravenkeeperCheck
+        case "trouble_brewing_010":
+            return .virginTrigger
         case "trouble_brewing_011":
             return .slayerShot
         case "trouble_brewing_014":

@@ -35,7 +35,10 @@ enum CharacterSelectionScope {
 
 enum SupportedAbilityInput {
     case text(placeholder: String)
+    case number(placeholder: String)
+    case yesNo(prompt: String)
     case players(minSelectionCount: Int, maxSelectionCount: Int, excludeSelf: Bool, aliveOnly: Bool, deadOnly: Bool)
+    case playersAndYesNo(playerCount: Int, excludeSelf: Bool, aliveOnly: Bool, deadOnly: Bool, prompt: String)
     case playerAndCharacter(excludeSelf: Bool, aliveOnly: Bool, deadOnly: Bool, characterScope: CharacterSelectionScope)
     case playersAndCharacter(playerCount: Int, excludeSelf: Bool, aliveOnly: Bool, deadOnly: Bool, characterScope: CharacterSelectionScope)
     case playerAndTwoCharacters(excludeSelf: Bool, aliveOnly: Bool, deadOnly: Bool, firstCharacterScope: CharacterSelectionScope, secondCharacterScope: CharacterSelectionScope)
@@ -45,7 +48,10 @@ enum SupportedAbilityInput {
 
 enum AbilitySelection {
     case text(String)
+    case number(Int)
+    case yesNo(Bool)
     case players([Seat])
+    case playersAndYesNo(players: [Seat], value: Bool)
     case playerAndCharacter(player: Seat, character: Character)
     case playersAndCharacter(players: [Seat], character: Character)
     case playerAndTwoCharacters(player: Seat, firstCharacter: Character, secondCharacter: Character)
@@ -64,6 +70,7 @@ enum SupportedAbility: String, Codable, Identifiable {
     case monkProtect
     case ravenkeeperCheck
     case slayerShot
+    case virginTrigger
     case butlerMaster
     case poisonerPoison
     case impKill
@@ -110,17 +117,22 @@ enum SupportedAbility: String, Codable, Identifiable {
         switch self {
         case .washerwomanInfo, .librarianInfo, .investigatorInfo:
             return L10n.tr("Record Pair")
-        case .chefInfo, .empathInfo, .undertakerInfo, .mathematicianInfo,
-             .flowergirlInfo, .townCrierInfo, .oracleInfo, .savantInfo:
-            return L10n.tr("Record Info")
+        case .chefInfo:
+            return L10n.tr("Evil Pair Count")
+        case .empathInfo:
+            return L10n.tr("Neighbor Evil Count")
         case .fortuneTellerCheck:
-            return L10n.tr("Checked")
+            return L10n.tr("Demon Check")
+        case .undertakerInfo:
+            return L10n.tr("Executed Role")
         case .monkProtect, .innkeeperProtect, .devilsAdvocateProtect:
             return L10n.tr("Protected")
         case .ravenkeeperCheck:
             return L10n.tr("Checked Player")
         case .slayerShot:
             return L10n.tr("Shot")
+        case .virginTrigger:
+            return L10n.tr("Virgin Trigger")
         case .butlerMaster:
             return L10n.tr("Master")
         case .poisonerPoison, .pukkaPoison:
@@ -132,8 +144,8 @@ enum SupportedAbility: String, Codable, Identifiable {
             return L10n.tr("Learned Player")
         case .sailorChoose:
             return L10n.tr("Drank With")
-        case .chambermaidCheck, .seamstressCheck:
-            return L10n.tr("Chose Players")
+        case .chambermaidCheck:
+            return L10n.tr("How Many Woke?")
         case .exorcistBlock:
             return L10n.tr("Exorcised")
         case .gamblerGuess:
@@ -154,6 +166,18 @@ enum SupportedAbility: String, Codable, Identifiable {
             return L10n.tr("Dreamed")
         case .snakeCharmerCheck:
             return L10n.tr("Charmed")
+        case .mathematicianInfo:
+            return L10n.tr("Abnormal Count")
+        case .flowergirlInfo:
+            return L10n.tr("Demon Voted?")
+        case .townCrierInfo:
+            return L10n.tr("Minion Nominated?")
+        case .oracleInfo:
+            return L10n.tr("Dead Evil Count")
+        case .savantInfo:
+            return L10n.tr("Savant Info")
+        case .seamstressCheck:
+            return L10n.tr("Same Alignment?")
         case .philosopherChoose:
             return L10n.tr("Became")
         case .artistQuestion:
@@ -168,11 +192,34 @@ enum SupportedAbility: String, Codable, Identifiable {
     }
 
     var defaultSystemImage: String {
+        switch self {
+        case .chefInfo, .empathInfo, .chambermaidCheck, .mathematicianInfo, .oracleInfo:
+            return "number.circle"
+        case .flowergirlInfo, .townCrierInfo:
+            return "checkmark.circle"
+        case .fortuneTellerCheck:
+            return "eye.circle"
+        case .seamstressCheck:
+            return "person.2.badge.gearshape"
+        case .slayerShot:
+            return "scope"
+        case .virginTrigger:
+            return "sparkles"
+        default:
+            break
+        }
+
         switch input {
         case .text:
             return "note.text"
+        case .number:
+            return "number"
+        case .yesNo:
+            return "checkmark.circle"
         case .players:
             return "person.2.fill"
+        case .playersAndYesNo:
+            return "person.2.badge.gearshape"
         case .playerAndCharacter:
             return "person.text.rectangle"
         case .playersAndCharacter:
@@ -188,9 +235,39 @@ enum SupportedAbility: String, Codable, Identifiable {
 
     var input: SupportedAbilityInput {
         switch self {
-        case .chefInfo, .empathInfo, .undertakerInfo, .gossipStatement,
-             .mathematicianInfo, .flowergirlInfo, .townCrierInfo, .oracleInfo,
-             .savantInfo, .artistQuestion:
+        case .chefInfo, .empathInfo, .chambermaidCheck, .mathematicianInfo, .oracleInfo:
+            return .number(placeholder: L10n.tr("Enter the number you learned"))
+        case .flowergirlInfo, .townCrierInfo:
+            return .yesNo(prompt: self == .flowergirlInfo ? L10n.tr("Did the Demon vote today?") : L10n.tr("Did a Minion nominate today?"))
+        case .fortuneTellerCheck, .seamstressCheck:
+            return .playersAndYesNo(
+                playerCount: 2,
+                excludeSelf: self == .seamstressCheck,
+                aliveOnly: false,
+                deadOnly: false,
+                prompt: self == .fortuneTellerCheck ? L10n.tr("Was either chosen player the Demon?") : L10n.tr("Were they the same alignment?")
+            )
+        case .slayerShot:
+            return .playersAndYesNo(
+                playerCount: 1,
+                excludeSelf: false,
+                aliveOnly: false,
+                deadOnly: false,
+                prompt: L10n.tr("Did the shot cause an execution?")
+            )
+        case .virginTrigger:
+            return .playersAndYesNo(
+                playerCount: 1,
+                excludeSelf: true,
+                aliveOnly: false,
+                deadOnly: false,
+                prompt: L10n.tr("Did the nomination cause an execution?")
+            )
+        case .undertakerInfo:
+            return .playerAndCharacter(excludeSelf: false, aliveOnly: false, deadOnly: true, characterScope: .any)
+        case .ravenkeeperCheck:
+            return .playerAndCharacter(excludeSelf: false, aliveOnly: false, deadOnly: false, characterScope: .any)
+        case .gossipStatement, .savantInfo, .artistQuestion:
             return .text(placeholder: L10n.tr("Record the claimed ability use"))
         case .washerwomanInfo:
             return .playersAndCharacter(playerCount: 2, excludeSelf: true, aliveOnly: false, deadOnly: false, characterScope: .townsfolk)
@@ -204,9 +281,8 @@ enum SupportedAbility: String, Codable, Identifiable {
             return .playerAndTwoCharacters(excludeSelf: false, aliveOnly: false, deadOnly: false, firstCharacterScope: .good, secondCharacterScope: .evil)
         case .jugglerInfo:
             return .multiplePlayerAndCharacter(maxSelectionCount: 5, excludeSelf: false, aliveOnly: false, deadOnly: false, characterScope: .any)
-        case .fortuneTellerCheck, .innkeeperProtect, .chambermaidCheck, .shabalothKill,
-             .seamstressCheck:
-            return .players(minSelectionCount: 2, maxSelectionCount: 2, excludeSelf: self == .chambermaidCheck || self == .seamstressCheck, aliveOnly: self == .chambermaidCheck, deadOnly: false)
+        case .innkeeperProtect, .shabalothKill:
+            return .players(minSelectionCount: 2, maxSelectionCount: 2, excludeSelf: false, aliveOnly: false, deadOnly: false)
         case .monkProtect, .butlerMaster:
             return .players(minSelectionCount: 1, maxSelectionCount: 1, excludeSelf: true, aliveOnly: false, deadOnly: false)
         case .ravenkeeperCheck, .slayerShot, .poisonerPoison, .impKill, .sailorChoose,
@@ -240,10 +316,30 @@ enum SupportedAbility: String, Codable, Identifiable {
             return L10n.tr("%@, the claimed Investigator has said that %@ includes the %@.", actorName, seatNames(players), character.localizedName)
         case let (.fortuneTellerCheck, .players(seats)):
             return L10n.tr("%@, the claimed Fortune Teller has said they checked %@.", actorName, seatNames(seats))
+        case let (.fortuneTellerCheck, .playersAndYesNo(seats, value)):
+            return yesNoCheckSummary(actorName: actorName, roleName: L10n.tr("Fortune Teller"), seats: seats, value: value)
         case let (.ravenkeeperCheck, .players(seats)):
             return L10n.tr("%@, the claimed Ravenkeeper has said they checked %@.", actorName, seatNames(seats))
+        case let (.ravenkeeperCheck, .playerAndCharacter(player, character)):
+            return L10n.tr("%@, the claimed Ravenkeeper has said they learned that %@ is the %@.", actorName, seatName(player), character.localizedName)
         case let (.slayerShot, .players(seats)):
             return L10n.tr("%@, the claimed Slayer has said they shot %@.", actorName, seatNames(seats))
+        case let (.slayerShot, .playersAndYesNo(seats, value)):
+            return executionSummary(
+                actorName: actorName,
+                roleName: L10n.tr("Slayer"),
+                verb: L10n.tr("shot"),
+                seats: seats,
+                executionHappened: value
+            )
+        case let (.virginTrigger, .playersAndYesNo(seats, value)):
+            return executionSummary(
+                actorName: actorName,
+                roleName: L10n.tr("Virgin"),
+                verb: L10n.tr("was nominated by"),
+                seats: seats,
+                executionHappened: value
+            )
         case let (.butlerMaster, .players(seats)):
             return L10n.tr("%@, the claimed Butler has said they chose %@ as their master.", actorName, seatNames(seats))
         case let (.poisonerPoison, .players(seats)):
@@ -295,6 +391,8 @@ enum SupportedAbility: String, Codable, Identifiable {
             return L10n.tr("%@, the claimed Snake Charmer has said they chose %@.", actorName, seatNames(seats))
         case let (.seamstressCheck, .players(seats)):
             return L10n.tr("%@, the claimed Seamstress has said they checked %@.", actorName, seatNames(seats))
+        case let (.seamstressCheck, .playersAndYesNo(seats, value)):
+            return yesNoCheckSummary(actorName: actorName, roleName: L10n.tr("Seamstress"), seats: seats, value: value)
         case let (.philosopherChoose, .character(character)):
             return L10n.tr("%@, the claimed Philosopher has said they chose %@.", actorName, character.localizedName)
         case let (.artistQuestion, .text(text)):
@@ -319,20 +417,36 @@ enum SupportedAbility: String, Codable, Identifiable {
             return L10n.tr("%@, the claimed Vortox has said they attacked %@.", actorName, seatNames(seats))
         case let (.chefInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Chef"), verb: L10n.tr("has said"), text: text)
+        case let (.chefInfo, .number(value)):
+            return numberSummary(actorName: actorName, roleName: L10n.tr("Chef"), value: value)
         case let (.empathInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Empath"), verb: L10n.tr("has said"), text: text)
+        case let (.empathInfo, .number(value)):
+            return numberSummary(actorName: actorName, roleName: L10n.tr("Empath"), value: value)
         case let (.undertakerInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Undertaker"), verb: L10n.tr("has said"), text: text)
+        case let (.undertakerInfo, .playerAndCharacter(player, character)):
+            return L10n.tr("%@, the claimed Undertaker has said they learned that %@ was the %@.", actorName, seatName(player), character.localizedName)
         case let (.mathematicianInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Mathematician"), verb: L10n.tr("has said"), text: text)
+        case let (.mathematicianInfo, .number(value)):
+            return numberSummary(actorName: actorName, roleName: L10n.tr("Mathematician"), value: value)
         case let (.flowergirlInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Flowergirl"), verb: L10n.tr("has said"), text: text)
+        case let (.flowergirlInfo, .yesNo(value)):
+            return yesNoSummary(actorName: actorName, roleName: L10n.tr("Flowergirl"), value: value)
         case let (.townCrierInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Town Crier"), verb: L10n.tr("has said"), text: text)
+        case let (.townCrierInfo, .yesNo(value)):
+            return yesNoSummary(actorName: actorName, roleName: L10n.tr("Town Crier"), value: value)
         case let (.oracleInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Oracle"), verb: L10n.tr("has said"), text: text)
+        case let (.oracleInfo, .number(value)):
+            return numberSummary(actorName: actorName, roleName: L10n.tr("Oracle"), value: value)
         case let (.savantInfo, .text(text)):
             return textSummary(actorName: actorName, roleName: L10n.tr("Savant"), verb: L10n.tr("has said"), text: text)
+        case let (.chambermaidCheck, .number(value)):
+            return numberSummary(actorName: actorName, roleName: L10n.tr("Chambermaid"), value: value)
         default:
             return nil
         }
@@ -342,6 +456,36 @@ enum SupportedAbility: String, Codable, Identifiable {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         return L10n.tr("%@, the claimed %@ %@: %@", actorName, roleName, verb, trimmed)
+    }
+
+    private func numberSummary(actorName: String, roleName: String, value: Int) -> String {
+        L10n.tr("%@, the claimed %@ has said: %lld", actorName, roleName, Int64(value))
+    }
+
+    private func yesNoSummary(actorName: String, roleName: String, value: Bool) -> String {
+        L10n.tr("%@, the claimed %@ has said: %@", actorName, roleName, value ? L10n.tr("Yes") : L10n.tr("No"))
+    }
+
+    private func yesNoCheckSummary(actorName: String, roleName: String, seats: [Seat], value: Bool) -> String {
+        L10n.tr(
+            "%@, the claimed %@ has said they checked %@ and learned %@.",
+            actorName,
+            roleName,
+            seatNames(seats),
+            value ? L10n.tr("Yes") : L10n.tr("No")
+        )
+    }
+
+    private func executionSummary(actorName: String, roleName: String, verb: String, seats: [Seat], executionHappened: Bool) -> String {
+        let outcome = executionHappened ? L10n.tr("an execution happened") : L10n.tr("no execution happened")
+        return L10n.tr(
+            "%@, the claimed %@ has said they %@ %@ and %@.",
+            actorName,
+            roleName,
+            verb,
+            seatNames(seats),
+            outcome
+        )
     }
 
     private func seatNames(_ seats: [Seat]) -> String {

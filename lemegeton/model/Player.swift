@@ -12,6 +12,8 @@ struct Player: Codable, Identifiable {
     var id = UUID()
     var name: String
     var character: Character? = nil
+    var learnedCharacter: Character? = nil
+    var revealedCharacter: Character? = nil
     var possibleCharacters: [Character] = []
     var isCharacterConfirmed: Bool
     var isDrunk: Bool   // 취하거나 중독 상태인지
@@ -39,6 +41,8 @@ struct Player: Codable, Identifiable {
     
     mutating func clearRoleAndState() {
         character = nil
+        learnedCharacter = nil
+        revealedCharacter = nil
         possibleCharacters.removeAll()
         isCharacterConfirmed = false
         isDrunk = false

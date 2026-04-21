@@ -12,7 +12,7 @@ struct BoardView: View {
     @StateObject var boardVM: BoardViewModel = BoardViewModel()
     
     enum ActiveAlert: Identifiable {
-        case resetBoard, cannotStartGame, cannotEndGame, completeGame, resetAfterCompleteGame
+        case resetBoard, cannotStartGame, cannotEndGame, beginRoleReveal, cannotCompleteGame, resetAfterCompleteGame
         var id: Int { hashValue }
         
         var title: String {
@@ -21,9 +21,12 @@ struct BoardView: View {
                 L10n.tr("Reset the Grimoire?")
             case .cannotStartGame:
                 L10n.tr("Cannot begin the chronicle")
-            case .cannotEndGame,
-                    .completeGame:
+            case .cannotEndGame:
                 L10n.tr("Finish the game?")
+            case .beginRoleReveal:
+                L10n.tr("Begin final reveal?")
+            case .cannotCompleteGame:
+                L10n.tr("Cannot complete the game")
             case .resetAfterCompleteGame:
                 L10n.tr("Restart with same board?")
             }
@@ -37,8 +40,10 @@ struct BoardView: View {
                 L10n.tr("Select at least as many characters as there are seats before starting the game.")
             case .cannotEndGame:
                 L10n.tr("The game has not ended. Please record all player's characters and update their death state.")
-            case .completeGame:
-                L10n.tr("This will end the game. Ended game cannot be started again.")
+            case .beginRoleReveal:
+                L10n.tr("This will move the game into the final reveal stage so you can record each player's actual role.")
+            case .cannotCompleteGame:
+                L10n.tr("Record every player's revealed role before completing the game.")
             case .resetAfterCompleteGame:
                 L10n.tr("Restart will keep the current board setup including player name and seats.")
             }
@@ -149,7 +154,7 @@ struct BoardView: View {
                                     }
                                     .buttonStyle(GrimoireButtonStyle(isDestructive: true))
 
-                                } else {
+                                } else if boardVM.currentGame.gameState == .in_game {
                                 Button {
                                     showPhaseNoteSheet = true
                                 } label: {
@@ -172,9 +177,9 @@ struct BoardView: View {
 
                                 // Finish the game
                                 Button {
-                                    activeAlert = boardVM.canEndGame() ? .completeGame : .cannotEndGame
+                                    activeAlert = boardVM.canEndGame() ? .beginRoleReveal : .cannotEndGame
                                 } label: {
-                                        Label("Final Verdict", systemImage: "flag.checkered")
+                                        Label("End Game", systemImage: "flag.checkered")
                                     }
                                     .buttonStyle(GrimoireButtonStyle())
 
@@ -196,6 +201,23 @@ struct BoardView: View {
                                         boardVM.updateSetup()
                                     } label: {
                                         Label("Arrange Seating", systemImage: "slider.horizontal.3")
+                                    }
+                                    .buttonStyle(GrimoireButtonStyle())
+                                } else {
+                                    NavigationLink {
+                                        PastGamesView(boardVM: boardVM)
+                                    } label: {
+                                        Label("Previous Games", systemImage: "clock.arrow.circlepath")
+                                    }
+                                    .buttonStyle(GrimoireButtonStyle())
+
+                                    Divider()
+                                        .background(Color(.themeTertiary))
+
+                                    Button {
+                                        activeAlert = boardVM.canCompleteGameAfterReveal() ? .resetAfterCompleteGame : .cannotCompleteGame
+                                    } label: {
+                                        Label("Complete Game", systemImage: "checkmark.seal")
                                     }
                                     .buttonStyle(GrimoireButtonStyle())
                                 }
@@ -248,7 +270,7 @@ struct BoardView: View {
             .toolbarBackgroundVisibility(.visible, for: .tabBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text(boardVM.currentGame.gameState == .set_up ? L10n.tr("Set up the Grimoire") : L10n.tr("%lld Alive", Int64(boardVM.currentGame.numAliveCharacters())))
+                    Text(toolbarTitle)
                         .grimoireBoldStyle(size: 18)
                         .tracking(2)
                 }
@@ -291,7 +313,7 @@ struct BoardView: View {
                 .sharedBackgroundVisibility(.hidden)
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    if boardVM.currentGame.gameState != .set_up {
+                    if boardVM.currentGame.gameState == .in_game {
                         Button {
                             boardVM.advancePhase()
                         } label: {
@@ -325,11 +347,17 @@ struct BoardView: View {
                         message: Text(alert.message),
                         dismissButton: .default(Text("OK"))
                     )
-                case .completeGame:
-                    primaryButton = .default(Text("Complete")) {
-                        activeAlert = .resetAfterCompleteGame
+                case .beginRoleReveal:
+                    primaryButton = .default(Text("Begin")) {
+                        boardVM.beginRoleReveal()
                     }
                     secondaryButton = .cancel(Text("Cancel"))
+                case .cannotCompleteGame:
+                    return Alert(
+                        title: Text(alert.title),
+                        message: Text(alert.message),
+                        dismissButton: .default(Text("OK"))
+                    )
                 case .resetAfterCompleteGame:
                     primaryButton = .default(Text("Restart")) {
                         boardVM.endGame(resetGame: false)
@@ -345,6 +373,19 @@ struct BoardView: View {
                     primaryButton: primaryButton!,
                     secondaryButton: secondaryButton!)
             }
+        }
+    }
+
+    private var toolbarTitle: String {
+        switch boardVM.currentGame.gameState {
+        case .set_up:
+            return L10n.tr("Set up the Grimoire")
+        case .in_game:
+            return L10n.tr("%lld Alive", Int64(boardVM.currentGame.numAliveCharacters()))
+        case .role_reveal:
+            return L10n.tr("Final Reveal")
+        case .game_over:
+            return L10n.tr("Game Complete")
         }
     }
 }
