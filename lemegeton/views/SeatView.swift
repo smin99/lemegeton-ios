@@ -34,73 +34,86 @@ struct SeatView: View {
         } else {
             VStack(spacing: 4) {
                 ZStack {
-                    Menu {
-                        Button(action: {
-                            showCharacterList = true
-                        }) {
-                            Label(
-                                "Claimed Role",
-                                systemImage: "person.fill.questionmark"
-                            )
-                        }
-                        if boardVM.currentGame.gameState == .role_reveal {
-                            Button(action: {
-                                showRevealedCharacterList = true
-                            }) {
-                                Label(
-                                    "Revealed Role",
-                                    systemImage: "person.fill.checkmark"
+                    Group {
+                        if boardVM.currentGame.gameState == .in_game && boardVM.currentGame.isNominationPhase {
+                            Button {
+                                boardVM.handleNominationSeatTap(seat)
+                            } label: {
+                                CircleImageView(
+                                    character: $seat.player.character,
+                                    isDead: $seat.player.isDead
                                 )
                             }
-                            if let claimedCharacter = seat.player.character {
+                            .buttonStyle(.plain)
+                        } else {
+                            Menu {
                                 Button(action: {
-                                    boardVM.updateRevealedRole(seat: seat, character: claimedCharacter)
+                                    showCharacterList = true
                                 }) {
                                     Label(
-                                        "Reveal Same as Claim",
-                                        systemImage: "checkmark.circle"
+                                        "Claimed Role",
+                                        systemImage: "person.fill.questionmark"
                                     )
                                 }
-                            }
-                        }
-                        if let ability = seat.player.character?.supportedAbility {
-                            Button(action: {
-                                activeAbilitySheet = ability
-                            }) {
-                                Label(
-                                    abilityMenuTitle(for: ability),
-                                    systemImage: abilitySystemImage(for: ability)
+                                if boardVM.currentGame.gameState == .role_reveal {
+                                    Button(action: {
+                                        showRevealedCharacterList = true
+                                    }) {
+                                        Label(
+                                            "Revealed Role",
+                                            systemImage: "person.fill.checkmark"
+                                        )
+                                    }
+                                    if let claimedCharacter = seat.player.character {
+                                        Button(action: {
+                                            boardVM.updateRevealedRole(seat: seat, character: claimedCharacter)
+                                        }) {
+                                            Label(
+                                                "Reveal Same as Claim",
+                                                systemImage: "checkmark.circle"
+                                            )
+                                        }
+                                    }
+                                }
+                                if let ability = seat.player.character?.supportedAbility {
+                                    Button(action: {
+                                        activeAbilitySheet = ability
+                                    }) {
+                                        Label(
+                                            abilityMenuTitle(for: ability),
+                                            systemImage: abilitySystemImage(for: ability)
+                                        )
+                                    }
+                                }
+                                Button(action: {
+                                    boardVM.deathUpon(seat: seat)
+                                }) {
+                                    Label(
+                                        seat.player.isDead ? "Revive!" : "Dead",
+                                        systemImage: seat.player.isDead
+                                        ? "sparkles"
+                                        : "person.slash.fill"
+                                    )
+                                }
+                                Button(action: {
+                                    showEditNameSheet = true
+                                }) {
+                                    Label("Edit Name", systemImage: "pencil.line")
+                                }
+                                Button(action: {
+                                    showNoteEditor = true
+                                }) {
+                                    Label("Write Note", systemImage: "note.text")
+                                }
+                            } label: {
+                                CircleImageView(
+                                    character: $seat.player.character,
+                                    isDead: $seat.player.isDead
                                 )
                             }
                         }
-                        Button(action: {
-                            boardVM.deathUpon(seat: seat)
-                        }) {
-                            Label(
-                                seat.player.isDead ? "Revive!" : "Dead",
-                                systemImage: seat.player.isDead
-                                ? "sparkles"
-                                : "person.slash.fill"
-                            )
-                        }
-                        Button(action: {
-                            showEditNameSheet = true
-                        }) {
-                            Label("Edit Name", systemImage: "pencil.line")
-                        }
-                        Button(action: {
-                            showNoteEditor = true
-                        }) {
-                            Label("Write Note", systemImage: "note.text")
-                        }
-                    } label: {
-                        CircleImageView(
-                            character: $seat.player.character,
-                            isDead: $seat.player.isDead
-                        )
                     }
                     .frame(width: SEAT_SIZE, height: SEAT_SIZE)
-                    .menuStyle(.button)
                     .buttonStyle(.borderless)
                     .sheet(isPresented: $showEditNameSheet) {
                         EditNameSheetView(
@@ -187,8 +200,17 @@ struct SeatView: View {
                                 handleAbilitySelection(ability, selection: selection)
                                 activeAbilitySheet = nil
                             }
-                        )
+                        ) 
                     }
+                }
+
+                if boardVM.currentGame.gameState == .in_game && boardVM.currentGame.isNominationPhase {
+                    NominationSeatStatusView(
+                        isNominator: boardVM.isNominationNominator(seat),
+                        isNominee: boardVM.isNominationNominee(seat),
+                        isVoter: boardVM.isNominationVoter(seat)
+                    )
+                    .frame(width: 96)
                 }
                 
                 HStack {
@@ -336,6 +358,45 @@ struct SeatView: View {
         default:
             break
         }
+    }
+}
+
+private struct NominationSeatStatusView: View {
+    let isNominator: Bool
+    let isNominee: Bool
+    let isVoter: Bool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if isNominator {
+                nominationTag("N", color: .themePrimary)
+            }
+
+            if isNominee {
+                nominationTag("T", color: .orange)
+            }
+
+            if isVoter {
+                nominationTag("V", color: .green)
+            }
+        }
+        .frame(height: 18)
+    }
+
+    private func nominationTag(_ title: String, color: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                Capsule()
+                    .fill(color.opacity(0.16))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(color.opacity(0.45), lineWidth: 1)
+            )
     }
 }
 

@@ -9,6 +9,34 @@ import Foundation
 import Combine
 import CoreGraphics
 
+enum NominationSelectionMode {
+    case nominator
+    case nominee
+    case voters
+
+    var title: String {
+        switch self {
+        case .nominator:
+            return L10n.tr("Choose Nominator")
+        case .nominee:
+            return L10n.tr("Choose Nominee")
+        case .voters:
+            return L10n.tr("Mark Voters")
+        }
+    }
+
+    var instruction: String {
+        switch self {
+        case .nominator:
+            return L10n.tr("Tap the player who made the nomination.")
+        case .nominee:
+            return L10n.tr("Tap the player who was nominated.")
+        case .voters:
+            return L10n.tr("Tap each player who voted. Tap again to remove a vote.")
+        }
+    }
+}
+
 class BoardViewModel: ObservableObject {
     
     private let repo = GameRepo.shared
@@ -17,6 +45,10 @@ class BoardViewModel: ObservableObject {
     @Published var currentGame: Game
     @Published var pastGames: [Game]
     @Published var allCharacters: [Character]
+    @Published var nominationSelectionMode: NominationSelectionMode = .nominator
+    @Published var nominationNominatorSeatID: UUID?
+    @Published var nominationNomineeSeatID: UUID?
+    @Published var nominationVoterSeatIDs: Set<UUID> = []
     
     private var undoStack: [Game] = []
     
@@ -58,6 +90,7 @@ class BoardViewModel: ObservableObject {
     func updateSetup() {
         currentGame.gameState = currentGame.gameState == .set_up ? .in_game : .set_up
         undoStack.removeAll()
+        resetNominationDraft()
         if currentGame.gameState == .in_game {
             currentGame.startChronicleIfNeeded()
         }
@@ -75,6 +108,7 @@ class BoardViewModel: ObservableObject {
         repo.startNewGame()
         currentGame = repo.currentGame!
         undoStack.removeAll()
+        resetNominationDraft()
     }
     
     func canEndGame() -> Bool {
@@ -87,6 +121,7 @@ class BoardViewModel: ObservableObject {
     func beginRoleReveal() {
         saveUndoSnapshotIfNeeded()
         currentGame.gameState = .role_reveal
+        resetNominationDraft()
         saveState()
     }
 
@@ -97,6 +132,7 @@ class BoardViewModel: ObservableObject {
     func endGame(resetGame: Bool) {
         undoStack.removeAll()
         currentGame.gameState = .game_over
+        resetNominationDraft()
         repo.saveCurrentGame(currentGame: currentGame)
         repo.endCurrentGame()
         refreshPastGames()
@@ -231,6 +267,109 @@ class BoardViewModel: ObservableObject {
         saveState()
     }
 
+    func recordNomination(nominator: Seat, nominee: Seat, voters: [Seat]) {
+        guard currentGame.seats.contains(where: { $0.id == nominator.id }),
+              currentGame.seats.contains(where: { $0.id == nominee.id }) else {
+            return
+        }
+
+        saveUndoSnapshotIfNeeded()
+
+        let voterSummary: String
+        if voters.isEmpty {
+            voterSummary = L10n.tr("no-one")
+        } else {
+            voterSummary = voters.map(displayName(for:)).joined(separator: ", ")
+        }
+
+        currentGame.appendCurrentPhaseEvent(
+            L10n.tr(
+                "%@ nominated %@. Votes: %@.",
+                displayName(for: nominator),
+                displayName(for: nominee),
+                voterSummary
+            )
+        )
+        saveState()
+    }
+
+    var nominationNominator: Seat? {
+        seat(withID: nominationNominatorSeatID)
+    }
+
+    var nominationNominee: Seat? {
+        seat(withID: nominationNomineeSeatID)
+    }
+
+    var nominationVoters: [Seat] {
+        currentGame.seats.filter { nominationVoterSeatIDs.contains($0.id) }
+    }
+
+    var canRecordNominationDraft: Bool {
+        guard let nominator = nominationNominator,
+              let nominee = nominationNominee else {
+            return false
+        }
+        return nominator.id != nominee.id
+    }
+
+    func setNominationSelectionMode(_ mode: NominationSelectionMode) {
+        nominationSelectionMode = mode
+    }
+
+    func handleNominationSeatTap(_ seat: Seat) {
+        guard currentGame.isNominationPhase else { return }
+
+        switch nominationSelectionMode {
+        case .nominator:
+            nominationNominatorSeatID = seat.id
+            if nominationNomineeSeatID == seat.id {
+                nominationNomineeSeatID = nil
+            }
+            nominationSelectionMode = .nominee
+        case .nominee:
+            guard nominationNominatorSeatID != seat.id else { return }
+            nominationNomineeSeatID = seat.id
+            nominationSelectionMode = .voters
+        case .voters:
+            if nominationVoterSeatIDs.contains(seat.id) {
+                nominationVoterSeatIDs.remove(seat.id)
+            } else {
+                nominationVoterSeatIDs.insert(seat.id)
+            }
+        }
+    }
+
+    func recordNominationDraft() {
+        guard let nominator = nominationNominator,
+              let nominee = nominationNominee,
+              nominator.id != nominee.id else {
+            return
+        }
+
+        recordNomination(nominator: nominator, nominee: nominee, voters: nominationVoters)
+        resetNominationDraft()
+    }
+
+    func resetNominationDraft() {
+        nominationSelectionMode = .nominator
+        nominationNominatorSeatID = nil
+        nominationNomineeSeatID = nil
+        nominationVoterSeatIDs.removeAll()
+    }
+
+    func isNominationNominator(_ seat: Seat) -> Bool {
+        nominationNominatorSeatID == seat.id
+    }
+
+    func isNominationNominee(_ seat: Seat) -> Bool {
+        nominationNomineeSeatID == seat.id
+    }
+
+    func isNominationVoter(_ seat: Seat) -> Bool {
+        nominationVoterSeatIDs.contains(seat.id)
+    }
+
     func activeAbilityTarget(for seat: Seat) -> Seat? {
         guard let sourceIndex = currentGame.seats.firstIndex(where: { $0.id == seat.id }),
               let targetID = currentGame.seats[sourceIndex].player.activeAbilityTargetSeatID else {
@@ -249,6 +388,7 @@ class BoardViewModel: ObservableObject {
     func advancePhase() {
         saveUndoSnapshotIfNeeded()
         currentGame.advancePhase()
+        resetNominationDraft()
         saveState()
     }
     
@@ -297,5 +437,15 @@ class BoardViewModel: ObservableObject {
         if undoStack.count > maxUndoCount {
             undoStack.removeFirst(undoStack.count - maxUndoCount)
         }
+    }
+
+    private func displayName(for seat: Seat) -> String {
+        let trimmed = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.tr("Unnamed player") : trimmed
+    }
+
+    private func seat(withID id: UUID?) -> Seat? {
+        guard let id else { return nil }
+        return currentGame.seats.first(where: { $0.id == id })
     }
 }

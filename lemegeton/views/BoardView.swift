@@ -66,7 +66,12 @@ struct BoardView: View {
 
                     ZStack(alignment: .topLeading) {
                         ScrollView(.vertical, showsIndicators: false) {
-                            SeatsCanvas(boardVM: boardVM)
+                            VStack(spacing: 0) {
+                                Color.clear
+                                    .frame(height: boardTopInset)
+
+                                SeatsCanvas(boardVM: boardVM)
+                            }
                         }
 
                         if boardVM.currentGame.gameState != .set_up {
@@ -106,6 +111,12 @@ struct BoardView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18))
                             .padding(.top, 16)
                             .padding(.horizontal, 16)
+                        }
+
+                        if boardVM.currentGame.gameState == .in_game && boardVM.currentGame.isNominationPhase {
+                            NominationPhaseControlsView(boardVM: boardVM)
+                                .padding(.top, isChronicleSummaryExpanded ? 132 : 84)
+                                .padding(.horizontal, 16)
                         }
 
                         // The Custom "Menu" (Dropdown)
@@ -168,7 +179,7 @@ struct BoardView: View {
                                 Button {
                                     showPlayerExplanations = true
                                 } label: {
-                                    Label("Player Logic", systemImage: "wand.and.stars")
+                                    Label("Contradictions", systemImage: "exclamationmark.bubble")
                                 }
                                 .buttonStyle(GrimoireButtonStyle())
                                 
@@ -317,7 +328,7 @@ struct BoardView: View {
                         Button {
                             boardVM.advancePhase()
                         } label: {
-                            Image(systemName: "moonphase.waning.crescent")
+                            Image(systemName: "arrow.right.circle")
                                 .foregroundColor(.themePrimary)
                         }
                     }
@@ -388,65 +399,135 @@ struct BoardView: View {
             return L10n.tr("Game Complete")
         }
     }
+
+    private var boardTopInset: CGFloat {
+        guard boardVM.currentGame.gameState != .set_up else {
+            return 0
+        }
+
+        var inset: CGFloat = isChronicleSummaryExpanded ? 132 : 84
+
+        if boardVM.currentGame.gameState == .in_game && boardVM.currentGame.isNominationPhase {
+            inset += 180
+        }
+
+        return inset
+    }
+}
+
+private struct NominationPhaseControlsView: View {
+    @StateObject var boardVM: BoardViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(boardVM.nominationSelectionMode.instruction)
+                .grimoireStyle(size: 14, italic: false)
+                .foregroundStyle(.themePrimary.opacity(0.92))
+
+            HStack(spacing: 8) {
+                nominationModeButton(.nominator, systemImage: "person.badge.plus")
+                nominationModeButton(.nominee, systemImage: "person.crop.circle.badge.questionmark")
+                nominationModeButton(.voters, systemImage: "checkmark.circle")
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.tr("Nominator: %@", displayName(for: boardVM.nominationNominator)))
+                Text(L10n.tr("Nominee: %@", displayName(for: boardVM.nominationNominee)))
+                Text(L10n.tr("Voters: %@", voterSummary))
+            }
+            .font(.caption)
+            .foregroundStyle(.themeOnSurface.opacity(0.84))
+
+            HStack(spacing: 10) {
+                Button {
+                    boardVM.recordNominationDraft()
+                } label: {
+                    Label("Record Nomination", systemImage: "square.and.pencil")
+                }
+                .buttonStyle(GlowButtonStyle())
+                .disabled(!boardVM.canRecordNominationDraft)
+
+                Button {
+                    boardVM.resetNominationDraft()
+                } label: {
+                    Label("Clear Selection", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(GrimoireButtonStyle())
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.themeSurface.opacity(0.96))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.themePrimary.opacity(0.15), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var voterSummary: String {
+        let voters = boardVM.nominationVoters
+        if voters.isEmpty {
+            return L10n.tr("no-one")
+        }
+        return voters.map(displayName(for:)).joined(separator: ", ")
+    }
+
+    private func nominationModeButton(_ mode: NominationSelectionMode, systemImage: String) -> some View {
+        Button {
+            boardVM.setNominationSelectionMode(mode)
+        } label: {
+            Label(mode.title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(boardVM.nominationSelectionMode == mode ? Color.themePrimary.opacity(0.22) : Color.themeSurface.opacity(0.85))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(boardVM.nominationSelectionMode == mode ? Color.themePrimary : Color.themePrimary.opacity(0.2), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(boardVM.nominationSelectionMode == mode ? .themePrimary : .themeOnSurface)
+    }
+
+    private func displayName(for seat: Seat?) -> String {
+        guard let seat else {
+            return L10n.tr("Not selected")
+        }
+        let trimmed = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.tr("Unnamed player") : trimmed
+    }
 }
 
 private struct PlayerExplanationView: View {
     let game: Game
-    
-    private var sortedSeats: [Seat] {
-        game.seats.sorted { lhs, rhs in
-            let leftName = lhs.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            let rightName = rhs.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if leftName.isEmpty != rightName.isEmpty {
-                return !leftName.isEmpty
-            }
-            return leftName.localizedCaseInsensitiveCompare(rightName) == .orderedAscending
-        }
+
+    private var contradictions: [ContradictionEntry] {
+        ContradictionAnalyzer(game: game).entries
     }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("These suggestions are heuristics, not a solver. They use the current script, each player’s claim, death state, notes, and recorded ability usage to build plausible story explanations.")
+                    Text("This view lists concrete contradiction points between claims, recorded actions, learned information, and final revealed roles.")
                         .grimoireStyle(size: 15, italic: false)
                         .foregroundStyle(.themePrimary.opacity(0.88))
-                    
-                    ForEach(sortedSeats) { seat in
-                        let explanation = PlayerExplanation(seat: seat, game: game)
+
+                    if contradictions.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(explanation.playerName)
-                                        .grimoireBoldStyle(size: 18)
-                                        .foregroundStyle(.themeOnSurface)
-                                    Text(explanation.claimSummary)
-                                        .grimoireStyle(size: 14, italic: false)
-                                        .foregroundStyle(.themePrimary)
-                                }
-                                Spacer()
-                                if seat.player.isDead {
-                                    Text("Dead")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.red)
-                                }
-                            }
-                            
-                            Text(explanation.primaryExplanation)
+                            Text("No strong contradictions found yet.")
+                                .grimoireBoldStyle(size: 18)
+                                .foregroundStyle(.themeOnSurface)
+
+                            Text("That does not prove the game state is coherent. It only means the chronicle does not yet contain an obvious conflict under the current claims and reveals.")
                                 .grimoireStyle(size: 15, italic: false)
                                 .foregroundStyle(.themePrimary.opacity(0.88))
-                            
-                            if let support = explanation.supportingDetail {
-                                Text(support)
-                                    .font(.caption)
-                                    .foregroundStyle(.themeOnSurface.opacity(0.82))
-                            }
-                            
-                            if let alternatives = explanation.alternativeRolesText {
-                                Text(alternatives)
-                                    .font(.caption)
-                                    .foregroundStyle(.themeOnSurface.opacity(0.72))
-                            }
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -456,12 +537,51 @@ private struct PlayerExplanationView: View {
                             RoundedRectangle(cornerRadius: 18)
                                 .stroke(Color.themePrimary.opacity(0.15), lineWidth: 1)
                         )
+                    } else {
+                        ForEach(contradictions) { contradiction in
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(alignment: .top) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(contradiction.title)
+                                            .grimoireBoldStyle(size: 18)
+                                            .foregroundStyle(.themeOnSurface)
+                                        if let subtitle = contradiction.subtitle {
+                                            Text(subtitle)
+                                                .grimoireStyle(size: 14, italic: false)
+                                                .foregroundStyle(.themePrimary)
+                                        }
+                                    }
+                                    Spacer()
+                                    Text(contradiction.severityLabel)
+                                        .font(.caption.bold())
+                                        .foregroundStyle(contradiction.severityColor)
+                                }
+
+                                Text(contradiction.message)
+                                    .grimoireStyle(size: 15, italic: false)
+                                    .foregroundStyle(.themePrimary.opacity(0.88))
+
+                                if let implication = contradiction.implication {
+                                    Text(implication)
+                                        .font(.caption)
+                                        .foregroundStyle(.themeOnSurface.opacity(0.82))
+                                }
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.themeSurface.opacity(0.94))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(Color.themePrimary.opacity(0.15), lineWidth: 1)
+                            )
+                        }
                     }
                 }
                 .padding(16)
             }
             .background(Color.themeSurface.ignoresSafeArea())
-            .navigationTitle("Player Logic")
+            .navigationTitle("Contradictions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.themeSurface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -469,230 +589,642 @@ private struct PlayerExplanationView: View {
     }
 }
 
-private struct PlayerExplanation {
-    let seat: Seat
-    let game: Game
-    
-    private var evidence: PlayerChronicleEvidence {
-        PlayerChronicleEvidence(game: game, seat: seat)
+private struct ContradictionEntry: Identifiable {
+    enum Severity {
+        case strong
+        case medium
+
+        var label: String {
+            switch self {
+            case .strong:
+                return L10n.tr("Strong")
+            case .medium:
+                return L10n.tr("Medium")
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .strong:
+                return .red
+            case .medium:
+                return .orange
+            }
+        }
     }
-    
-    var playerName: String {
+
+    let id = UUID()
+    let title: String
+    let subtitle: String?
+    let message: String
+    let implication: String?
+    let severity: Severity
+
+    var severityLabel: String { severity.label }
+    var severityColor: Color { severity.color }
+}
+
+private struct ContradictionAnalyzer {
+    let game: Game
+
+    var entries: [ContradictionEntry] {
+        var results: [ContradictionEntry] = []
+        results.append(contentsOf: duplicateClaimContradictions())
+        results.append(contentsOf: revealContradictions())
+        results.append(contentsOf: abilityCadenceContradictions())
+        results.append(contentsOf: virginContradictions())
+        results.append(contentsOf: slayerContradictions())
+        results.append(contentsOf: fortuneTellerContradictions())
+        results.append(contentsOf: seamstressContradictions())
+        results.append(contentsOf: flowergirlContradictions())
+        results.append(contentsOf: townCrierContradictions())
+        results.append(contentsOf: learnedInfoContradictions())
+        return results
+    }
+
+    private var namedSeats: [Seat] {
+        game.seats.filter { !$0.player.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private var nominationEvents: [NominationEvent] {
+        game.phaseTimeline().enumerated().flatMap { phaseIndex, entry in
+            entry.note
+                .split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .compactMap { line in
+                    parseNominationEvent(line: line, phaseIndex: phaseIndex)
+                }
+        }
+    }
+
+    private var contradictionWeightsBySeatID: [UUID: Int] {
+        var weights: [UUID: Int] = [:]
+
+        for seat in game.seats {
+            guard let claimed = seat.player.character,
+                  let revealed = seat.player.revealedCharacter,
+                  claimed.id != revealed.id else {
+                continue
+            }
+            weights[seat.id, default: 0] += 3
+        }
+
+        for seat in game.seats {
+            guard let claimed = seat.player.character,
+                  let ability = claimed.supportedAbility else {
+                continue
+            }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.count > 1 {
+                weights[seat.id, default: 0] += 3
+            }
+
+            if PlayerRoleRule.deathTriggeredAbilities.contains(ability), !evidence.actorEvents.isEmpty {
+                if evidence.firstDeathPhaseIndex == nil {
+                    weights[seat.id, default: 0] += 3
+                } else if let earliestUse = evidence.actorEvents.map(\.phaseIndex).min(),
+                          let firstDeathPhaseIndex = evidence.firstDeathPhaseIndex,
+                          earliestUse < firstDeathPhaseIndex {
+                    weights[seat.id, default: 0] += 3
+                }
+            }
+
+            if ability == .professorResurrect, evidence.invalidProfessorTargetName != nil {
+                weights[seat.id, default: 0] += 2
+            }
+        }
+
+        for seat in game.seats where seat.player.character?.supportedAbility == .virginTrigger {
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+            for event in evidence.actorEvents where event.line.contains("an execution happened") {
+                guard let nominator = targetSeat(in: event.line, excluding: seat.id),
+                      nominator.player.character?.type == .townsfolk else {
+                    continue
+                }
+                weights[seat.id, default: 0] += 2
+                weights[nominator.id, default: 0] += 2
+            }
+        }
+
+        for seat in game.seats where seat.player.character?.supportedAbility == .slayerShot {
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+            for event in evidence.actorEvents where event.line.contains("an execution happened") {
+                guard let target = targetSeat(in: event.line, excluding: seat.id),
+                      let revealed = target.player.revealedCharacter,
+                      revealed.type != .demon else {
+                    continue
+                }
+                weights[seat.id, default: 0] += 3
+            }
+        }
+
+        for seat in game.seats where seat.player.character?.supportedAbility == .fortuneTellerCheck {
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+            for event in evidence.actorEvents where event.line.contains(" checked ") && event.line.contains(" learned No") {
+                let targets = targetSeats(in: event.line, excluding: seat.id)
+                guard targets.count == 2,
+                      let firstReveal = targets[0].player.revealedCharacter,
+                      let secondReveal = targets[1].player.revealedCharacter,
+                      firstReveal.type == .demon || secondReveal.type == .demon else {
+                    continue
+                }
+                weights[seat.id, default: 0] += 2
+            }
+        }
+
+        for seat in game.seats where seat.player.character?.supportedAbility == .seamstressCheck {
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+            for event in evidence.actorEvents where event.line.contains(" checked ") {
+                let targets = targetSeats(in: event.line, excluding: seat.id)
+                guard targets.count == 2,
+                      let firstReveal = targets[0].player.revealedCharacter,
+                      let secondReveal = targets[1].player.revealedCharacter else {
+                    continue
+                }
+                let sameAlignment = firstReveal.type.isGood == secondReveal.type.isGood
+                if (event.line.contains(" learned Yes") && !sameAlignment) || (event.line.contains(" learned No") && sameAlignment) {
+                    weights[seat.id, default: 0] += 2
+                }
+            }
+        }
+
+        for seat in game.seats where seat.player.character?.supportedAbility == .flowergirlInfo {
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+            for event in evidence.actorEvents {
+                guard let dayPhaseIndex = referencedDayPhaseIndex(for: event) else { continue }
+                let demonVoted = nominationEvents
+                    .filter { $0.phaseIndex == dayPhaseIndex }
+                    .flatMap(\.voters)
+                    .contains { $0.player.revealedCharacter?.type == .demon }
+
+                if (event.line.contains(" said: Yes") && !demonVoted) || (event.line.contains(" said: No") && demonVoted) {
+                    weights[seat.id, default: 0] += 2
+                }
+            }
+        }
+
+        for seat in game.seats where seat.player.character?.supportedAbility == .townCrierInfo {
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+            for event in evidence.actorEvents {
+                guard let dayPhaseIndex = referencedDayPhaseIndex(for: event) else { continue }
+                let minionNominated = nominationEvents
+                    .filter { $0.phaseIndex == dayPhaseIndex }
+                    .contains { $0.nominator.player.revealedCharacter?.type == .minion }
+
+                if (event.line.contains(" said: Yes") && !minionNominated) || (event.line.contains(" said: No") && minionNominated) {
+                    weights[seat.id, default: 0] += 2
+                }
+            }
+        }
+
+        for seat in game.seats {
+            if let learned = seat.player.learnedCharacter,
+               let revealed = seat.player.revealedCharacter,
+               learned.id != revealed.id {
+                weights[seat.id, default: 0] += 2
+            }
+        }
+
+        return weights
+    }
+
+    private func duplicateClaimContradictions() -> [ContradictionEntry] {
+        let grouped = Dictionary(grouping: game.seats.compactMap { seat -> (Character, Seat)? in
+            guard let claimed = seat.player.character else { return nil }
+            return (claimed, seat)
+        }, by: { $0.0.id })
+
+        return grouped.values.compactMap { entries in
+            guard entries.count > 1 else { return nil }
+
+            let character = entries[0].0
+            let seats = entries.map(\.1)
+            let sortedSeats = seats.sorted { suspicionScore(for: $0) > suspicionScore(for: $1) }
+            let ranked = sortedSeats.map { seat in
+                L10n.tr("%@ (%lld)", displayName(for: seat), Int64(suspicionScore(for: seat)))
+            }.joined(separator: ", ")
+
+            let suspicionText: String
+            if let mostSuspicious = sortedSeats.first, suspicionScore(for: mostSuspicious) > 0 {
+                suspicionText = L10n.tr("%@ currently looks more suspicious by logical cross-checks.", displayName(for: mostSuspicious))
+            } else {
+                suspicionText = L10n.tr("The current contradiction data does not clearly separate which of these claimants is more suspicious yet.")
+            }
+
+            return ContradictionEntry(
+                title: character.localizedName,
+                subtitle: L10n.tr("Multiple claimants"),
+                message: L10n.tr("Several players are claiming the same role: %@.", seatNames(seats)),
+                implication: L10n.tr("Suspicion score from current contradiction checks: %@. %@", ranked, suspicionText),
+                severity: .medium
+            )
+        }
+    }
+
+    private func revealContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard let claimed = seat.player.character,
+                  let revealed = seat.player.revealedCharacter,
+                  claimed.id != revealed.id else {
+                return nil
+            }
+
+            return ContradictionEntry(
+                title: displayName(for: seat),
+                subtitle: L10n.tr("Claimed %@ · Revealed %@", claimed.localizedName, revealed.localizedName),
+                message: L10n.tr("This seat’s final revealed role does not match the public claim."),
+                implication: L10n.tr("If the reveal is trusted, the claim was false. If the reveal is not trusted, the contradiction remains unresolved."),
+                severity: .strong
+            )
+        }
+    }
+
+    private func abilityCadenceContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard let claimed = seat.player.character,
+                  let ability = claimed.supportedAbility else {
+                return nil
+            }
+
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.count > 1 {
+                return ContradictionEntry(
+                    title: displayName(for: seat),
+                    subtitle: L10n.tr("Claimed %@", claimed.localizedName),
+                    message: L10n.tr("%@ is effectively a one-use claim here, but the chronicle logs %lld separate claimed uses.", claimed.localizedName, Int64(evidence.actorEvents.count)),
+                    implication: L10n.tr("Either the claim is false, the record contains duplicate entries, or another explanation such as role change is missing."),
+                    severity: .strong
+                )
+            }
+
+            if PlayerRoleRule.deathTriggeredAbilities.contains(ability), !evidence.actorEvents.isEmpty {
+                guard let firstDeathPhaseIndex = evidence.firstDeathPhaseIndex else {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed %@", claimed.localizedName),
+                        message: L10n.tr("%@ normally needs the player to die before acting, but the chronicle shows a claimed use without any recorded death.", claimed.localizedName),
+                        implication: L10n.tr("Either the claim is false or the death state in the chronicle is incomplete."),
+                        severity: .strong
+                    )
+                }
+
+                if let earliestUse = evidence.actorEvents.map(\.phaseIndex).min(), earliestUse < firstDeathPhaseIndex {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed %@", claimed.localizedName),
+                        message: L10n.tr("The chronicle shows the claimed %@ action before this player’s recorded death.", claimed.localizedName),
+                        implication: L10n.tr("Either the claim is false or the timing record is wrong."),
+                        severity: .strong
+                    )
+                }
+            }
+
+            if ability == .professorResurrect, let invalidTarget = evidence.invalidProfessorTargetName {
+                return ContradictionEntry(
+                    title: displayName(for: seat),
+                    subtitle: L10n.tr("Claimed %@", claimed.localizedName),
+                    message: L10n.tr("The claimed Professor resurrected %@, but that player was not recorded as dead earlier in the chronicle.", invalidTarget),
+                    implication: L10n.tr("Either the resurrection story is false or earlier death logging is missing."),
+                    severity: .medium
+                )
+            }
+
+            return nil
+        }
+    }
+
+    private func virginContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard seat.player.character?.supportedAbility == .virginTrigger else { return nil }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            for event in evidence.actorEvents where event.line.contains("an execution happened") {
+                guard let nominator = targetSeat(in: event.line, excluding: seat.id) else { continue }
+                if nominator.player.character?.type == .townsfolk {
+                    return ContradictionEntry(
+                        title: L10n.tr("%@ and %@", displayName(for: seat), displayName(for: nominator)),
+                        subtitle: L10n.tr("Virgin trigger"),
+                        message: L10n.tr("The claimed Virgin says %@ was nominated by claimed Townsfolk %@ and an execution happened.", displayName(for: seat), displayName(for: nominator)),
+                        implication: L10n.tr("If the Virgin ability really triggered, at least one of those public claims is false."),
+                        severity: .strong
+                    )
+                }
+            }
+
+            return nil
+        }
+    }
+
+    private func slayerContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard seat.player.character?.supportedAbility == .slayerShot else { return nil }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            for event in evidence.actorEvents where event.line.contains("an execution happened") {
+                guard let target = targetSeat(in: event.line, excluding: seat.id),
+                      let revealed = target.player.revealedCharacter,
+                      revealed.type != .demon else {
+                    continue
+                }
+
+                return ContradictionEntry(
+                    title: L10n.tr("%@ shot %@", displayName(for: seat), displayName(for: target)),
+                    subtitle: L10n.tr("Slayer execution"),
+                    message: L10n.tr("The claimed Slayer says the shot caused an execution, but %@ was finally revealed as %@, not a Demon.", displayName(for: target), revealed.localizedName),
+                    implication: L10n.tr("If the final reveal is trusted, either the Slayer story is false or the final reveal is wrong."),
+                    severity: .strong
+                )
+            }
+
+            return nil
+        }
+    }
+
+    private func fortuneTellerContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard seat.player.character?.supportedAbility == .fortuneTellerCheck else { return nil }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            for event in evidence.actorEvents where event.line.contains(" checked ") && event.line.contains(" learned No") {
+                let targets = targetSeats(in: event.line, excluding: seat.id)
+                guard targets.count == 2,
+                      let firstReveal = targets[0].player.revealedCharacter,
+                      let secondReveal = targets[1].player.revealedCharacter,
+                      firstReveal.type == .demon || secondReveal.type == .demon else {
+                    continue
+                }
+
+                return ContradictionEntry(
+                    title: displayName(for: seat),
+                    subtitle: L10n.tr("Claimed Fortune Teller"),
+                    message: L10n.tr("The claimed Fortune Teller recorded a No on %@ and %@, but one of those players was finally revealed as a Demon.", displayName(for: targets[0]), displayName(for: targets[1])),
+                    implication: L10n.tr("This can still be explained by poisoning, drunkenness, or a bad final reveal, but under a straightforward reading it is a contradiction."),
+                    severity: .medium
+                )
+            }
+
+            return nil
+        }
+    }
+
+    private func seamstressContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard seat.player.character?.supportedAbility == .seamstressCheck else { return nil }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            for event in evidence.actorEvents where event.line.contains(" checked ") {
+                let targets = targetSeats(in: event.line, excluding: seat.id)
+                guard targets.count == 2,
+                      let firstReveal = targets[0].player.revealedCharacter,
+                      let secondReveal = targets[1].player.revealedCharacter else {
+                    continue
+                }
+
+                let sameAlignment = firstReveal.type.isGood == secondReveal.type.isGood
+
+                if event.line.contains(" learned Yes"), !sameAlignment {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed Seamstress"),
+                        message: L10n.tr("The claimed Seamstress said %@ and %@ were the same alignment, but the final reveals put them on opposite teams.", displayName(for: targets[0]), displayName(for: targets[1])),
+                        implication: L10n.tr("Either the seamstress information is false, the final reveal is wrong, or some other record in the chain is missing."),
+                        severity: .medium
+                    )
+                }
+
+                if event.line.contains(" learned No"), sameAlignment {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed Seamstress"),
+                        message: L10n.tr("The claimed Seamstress said %@ and %@ were different alignments, but the final reveals put them on the same team.", displayName(for: targets[0]), displayName(for: targets[1])),
+                        implication: L10n.tr("Either the seamstress information is false, the final reveal is wrong, or some other record in the chain is missing."),
+                        severity: .medium
+                    )
+                }
+            }
+
+            return nil
+        }
+    }
+
+    private func flowergirlContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard seat.player.character?.supportedAbility == .flowergirlInfo else { return nil }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            for event in evidence.actorEvents {
+                guard let dayPhaseIndex = referencedDayPhaseIndex(for: event) else { continue }
+                guard let nominationPhaseIndex = nominationPhaseIndex(for: dayPhaseIndex) else { continue }
+                let dayTitle = game.phaseTimeline()[dayPhaseIndex].title
+                let demonVoters = nominationEvents
+                    .filter { $0.phaseIndex == nominationPhaseIndex }
+                    .flatMap(\.voters)
+                    .filter { $0.player.revealedCharacter?.type == .demon }
+
+                if event.line.contains(" said: Yes"), demonVoters.isEmpty {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed Flowergirl"),
+                        message: L10n.tr("The claimed Flowergirl said the Demon voted on %@, but no recorded voter from that day was finally revealed as a Demon.", dayTitle),
+                        implication: L10n.tr("Either the Flowergirl information is false, the nomination/vote log is incomplete, or the final reveal is wrong."),
+                        severity: .medium
+                    )
+                }
+
+                if event.line.contains(" said: No"), !demonVoters.isEmpty {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed Flowergirl"),
+                        message: L10n.tr("The claimed Flowergirl said the Demon did not vote on %@, but %@ is recorded voting and was finally revealed as a Demon.", dayTitle, displayName(for: demonVoters[0])),
+                        implication: L10n.tr("Either the Flowergirl information is false, the nomination/vote log is incomplete, or the final reveal is wrong."),
+                        severity: .medium
+                    )
+                }
+            }
+
+            return nil
+        }
+    }
+
+    private func townCrierContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard seat.player.character?.supportedAbility == .townCrierInfo else { return nil }
+            let evidence = PlayerChronicleEvidence(game: game, seat: seat)
+
+            for event in evidence.actorEvents {
+                guard let dayPhaseIndex = referencedDayPhaseIndex(for: event) else { continue }
+                guard let nominationPhaseIndex = nominationPhaseIndex(for: dayPhaseIndex) else { continue }
+                let dayTitle = game.phaseTimeline()[dayPhaseIndex].title
+                let minionNominators = nominationEvents
+                    .filter { $0.phaseIndex == nominationPhaseIndex }
+                    .map(\.nominator)
+                    .filter { $0.player.revealedCharacter?.type == .minion }
+
+                if event.line.contains(" said: Yes"), minionNominators.isEmpty {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed Town Crier"),
+                        message: L10n.tr("The claimed Town Crier said a Minion nominated on %@, but no recorded nominator from that day was finally revealed as a Minion.", dayTitle),
+                        implication: L10n.tr("Either the Town Crier information is false, the nomination log is incomplete, or the final reveal is wrong."),
+                        severity: .medium
+                    )
+                }
+
+                if event.line.contains(" said: No"), !minionNominators.isEmpty {
+                    return ContradictionEntry(
+                        title: displayName(for: seat),
+                        subtitle: L10n.tr("Claimed Town Crier"),
+                        message: L10n.tr("The claimed Town Crier said no Minion nominated on %@, but %@ is recorded nominating and was finally revealed as a Minion.", dayTitle, displayName(for: minionNominators[0])),
+                        implication: L10n.tr("Either the Town Crier information is false, the nomination log is incomplete, or the final reveal is wrong."),
+                        severity: .medium
+                    )
+                }
+            }
+
+            return nil
+        }
+    }
+
+    private func learnedInfoContradictions() -> [ContradictionEntry] {
+        game.seats.compactMap { seat in
+            guard let claimedAbility = seat.player.character?.supportedAbility,
+                  [.undertakerInfo, .ravenkeeperCheck, .grandmotherInfo].contains(claimedAbility) else { return nil }
+
+            let mismatchedTargets = game.seats.compactMap { targetSeat -> String? in
+                guard let learned = targetSeat.player.learnedCharacter,
+                      let revealed = targetSeat.player.revealedCharacter,
+                      learned.id != revealed.id else {
+                    return nil
+                }
+                return L10n.tr("%@ learned as %@ but revealed as %@", displayName(for: targetSeat), learned.localizedName, revealed.localizedName)
+            }
+
+            guard !mismatchedTargets.isEmpty else { return nil }
+
+            let subtitle: String
+            switch claimedAbility {
+            case .undertakerInfo:
+                subtitle = L10n.tr("Claimed Undertaker")
+            case .ravenkeeperCheck:
+                subtitle = L10n.tr("Claimed Ravenkeeper")
+            case .grandmotherInfo:
+                subtitle = L10n.tr("Claimed Grandmother")
+            default:
+                subtitle = ""
+            }
+
+            return ContradictionEntry(
+                title: displayName(for: seat),
+                subtitle: subtitle,
+                message: mismatchedTargets.joined(separator: " · "),
+                implication: L10n.tr("At least one of the learned information, the final reveal, or the surrounding drunkenness/poisoning story is wrong."),
+                severity: .medium
+            )
+        }
+    }
+
+    private func displayName(for seat: Seat) -> String {
         let trimmed = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? L10n.tr("Unnamed player") : trimmed
     }
-    
-    var claimSummary: String {
-        guard let claimed = seat.player.character else {
-            return L10n.tr("No claimed role recorded")
-        }
-        if evidence.actorEvents.isEmpty {
-            return L10n.tr("Claiming %@", claimed.localizedName)
-        }
-        return L10n.tr(
-            "Claiming %@ · %lld logged action%@",
-            claimed.localizedName,
-            Int64(evidence.actorEvents.count),
-            evidence.actorEvents.count == 1 ? "" : "s"
-        )
+
+    private func suspicionScore(for seat: Seat) -> Int {
+        contradictionWeightsBySeatID[seat.id, default: 0]
     }
-    
-    var primaryExplanation: String {
-        guard let claimed = seat.player.character else {
-            if let deathContext = evidence.deathContext {
-                return L10n.tr("This player has no recorded claim. The chronicle shows %@, which still fits a hidden good role, an Outsider avoiding attention, or an evil player who never had to settle on a public bluff.", deathContext)
-            }
-            if seat.player.isDead {
-                return L10n.tr("This player has no recorded claim and is already dead, which can still fit a hidden information role, an Outsider staying quiet, or an evil player who never needed to publicly settle on a public bluff.")
-            }
-            return L10n.tr("This player has no recorded claim yet. In Blood on the Clocktower, that can still make sense for cautious information roles, Outsiders who prefer to hide, or evil players delaying a bluff.")
-        }
-        
-        if let contradiction = contradictionSummary(for: claimed) {
-            return contradiction
-        }
-        
-        if let support = strongSupportSummary(for: claimed) {
-            return support
-        }
-        
-        switch claimed.type {
-        case .townsfolk:
-            return L10n.tr("A Townsfolk explanation is still possible, but it currently relies more on social read than on a fully consistent action trail in the chronicle.")
-        case .outsider:
-            return L10n.tr("An Outsider explanation remains plausible because Outsider stories often look messy or incomplete, but the chronicle does not yet strongly anchor this player to one specific outcome.")
-        case .minion:
-            return L10n.tr("A Minion explanation stays open if this claim looks more like pressure or misinformation than a truthful public role, especially if the action trail is thin.")
-        case .demon:
-            return L10n.tr("A Demon explanation is only moderately supported right now. It becomes stronger if the kill pattern, pressure, and bluff line keep pointing back to this seat.")
+
+    private func targetSeat(in line: String, excluding seatID: UUID) -> Seat? {
+        namedSeats.first { seat in
+            guard seat.id != seatID else { return false }
+            let name = displayName(for: seat)
+            return line.contains(name)
         }
     }
-    
-    var supportingDetail: String? {
-        var details: [String] = []
-        
-        if let claimed = seat.player.character {
-            if seat.player.isCharacterConfirmed {
-                details.append(L10n.tr("This seat is already marked confirmed as %@.", claimed.localizedName))
-            }
-            
-            if let cadence = cadenceDetail(for: claimed) {
-                details.append(cadence)
-            }
-            
-            if let targetCrossCheck = targetCrossCheckDetail(for: claimed) {
-                details.append(targetCrossCheck)
-            }
-            
-            if claimed.supportedAbility != nil, seat.player.activeAbilityTargetSeatID != nil, evidence.actorEvents.isEmpty {
-                details.append(L10n.tr("A target is stored on this seat, but the chronicle does not yet include a matching public action record."))
-            }
+
+    private func targetSeats(in line: String, excluding seatID: UUID) -> [Seat] {
+        namedSeats.filter { seat in
+            guard seat.id != seatID else { return false }
+            let name = displayName(for: seat)
+            return line.contains(name)
         }
-        
-        if !seat.player.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            details.append(L10n.tr("There is a private note on this player, which may support or weaken the claim depending on what you recorded."))
-        }
-        
-        if let deathContext = evidence.deathContext {
-            details.append(L10n.tr("Chronicle timing: %@.", deathContext))
-        }
-        
-        if seat.player.isDead, let claimed = seat.player.character {
-            switch claimed.type {
-            case .townsfolk, .outsider:
-                details.append(L10n.tr("Death does not hurt this explanation by itself; dangerous good roles and harmful Outsiders often die early."))
-            case .minion, .demon:
-                details.append(L10n.tr("Death could still fit a frame job, a spent evil role, or a bluff collapsing under pressure rather than proving the evil claim."))
-            }
-        }
-        
-        if evidence.targetedByAttacksAfterClaims > 0 {
-            details.append(
-                L10n.tr(
-                    "Other players' logged actions point at this seat %lld time%@, which can matter when evaluating whether this player was attracting night attention.",
-                    Int64(evidence.targetedByAttacksAfterClaims),
-                    evidence.targetedByAttacksAfterClaims == 1 ? "" : "s"
-                )
-            )
-        }
-        
-        return details.isEmpty ? nil : details.joined(separator: " ")
     }
-    
-    var alternativeRolesText: String? {
-        guard let claimed = seat.player.character else { return nil }
-        
-        let alternatives = game.inGameCharacters
-            .filter { $0.type == claimed.type && $0.id != claimed.id }
-            .prefix(3)
-            .map(\.localizedName)
-        
-        guard !alternatives.isEmpty else { return nil }
-        return L10n.tr("Other same-type explanations in this script: %@.", alternatives.joined(separator: ", "))
+
+    private func referencedDayPhaseIndex(for event: PhaseEntry) -> Int? {
+        switch event.phase {
+        case .firstNight:
+            return nil
+        case .day:
+            return event.phaseIndex
+        case .nomination:
+            return event.phaseIndex - 1
+        case .night:
+            let priorDay = event.phaseIndex - 2
+            return priorDay >= 0 ? priorDay : nil
+        }
     }
-    
-    private func contradictionSummary(for claimed: Character) -> String? {
-        guard let ability = claimed.supportedAbility else { return nil }
-        
-        if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.count > 1 {
-            return L10n.tr("This explanation is weak because %@ is effectively a one-use claim here, but the chronicle logs %lld separate claimed uses.", claimed.localizedName, Int64(evidence.actorEvents.count))
-        }
-        
-        if PlayerRoleRule.deathTriggeredAbilities.contains(ability), !evidence.actorEvents.isEmpty {
-            guard let firstDeathPhaseIndex = evidence.firstDeathPhaseIndex else {
-                return L10n.tr("This explanation is weak because %@ normally needs the player to die before acting, but the chronicle shows a claimed use without any recorded death.", claimed.localizedName)
-            }
-            
-            if let earliestUse = evidence.actorEvents.map(\.phaseIndex).min(), earliestUse < firstDeathPhaseIndex {
-                return L10n.tr("This explanation is weak because the chronicle shows the claimed %@ action before this player’s recorded death.", claimed.localizedName)
-            }
-        }
-        
-        if ability == .professorResurrect, evidence.hasInvalidProfessorResurrection {
-            return L10n.tr("This explanation is weak because the claimed Professor resurrected a player who was not recorded as dead earlier in the chronicle.")
-        }
-        
-        return nil
-    }
-    
-    private func strongSupportSummary(for claimed: Character) -> String? {
-        guard let ability = claimed.supportedAbility else {
-            if claimed.type == .outsider {
-                return L10n.tr("An Outsider explanation is logical here because Outsider stories often stay incomplete, and the absence of a strong action trail is not itself suspicious.")
-            }
+
+    private func nominationPhaseIndex(for dayPhaseIndex: Int) -> Int? {
+        let nominationIndex = dayPhaseIndex + 1
+        guard game.phaseTimeline().indices.contains(nominationIndex) else {
             return nil
         }
-        
-        if PlayerRoleRule.nightlyAbilities.contains(ability),
-           evidence.eligibleNightCount >= 2,
-           evidence.nightActionCount >= max(1, evidence.eligibleNightCount - 1) {
-            return L10n.tr("This explanation is fairly strong because the chronicle shows a repeated %@ action pattern across the nights this player stayed alive.", claimed.localizedName)
+
+        if case .nomination = game.phaseTimeline()[nominationIndex].phase {
+            return nominationIndex
         }
-        
-        if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.count == 1 {
-            return L10n.tr("This explanation is fairly strong because the chronicle shows a single claimed %@ use, which matches the expected once-per-game pattern.", claimed.localizedName)
-        }
-        
-        if PlayerRoleRule.deathTriggeredAbilities.contains(ability),
-           evidence.actorEvents.count == 1,
-           let firstDeathPhaseIndex = evidence.firstDeathPhaseIndex,
-           let usePhaseIndex = evidence.actorEvents.first?.phaseIndex,
-           usePhaseIndex >= firstDeathPhaseIndex {
-            return L10n.tr("This explanation is fairly strong because the chronicle shows the claimed %@ action only after this player’s recorded death.", claimed.localizedName)
-        }
-        
-        if ability == .monkProtect || ability == .innkeeperProtect || ability == .devilsAdvocateProtect,
-           evidence.actorEvents.count > 0 {
-            return L10n.tr("This explanation is reasonably logical because the chronicle contains a concrete protection story for this player instead of only a bare role claim.")
-        }
-        
+
         return nil
     }
-    
-    private func cadenceDetail(for claimed: Character) -> String? {
-        guard let ability = claimed.supportedAbility else { return nil }
-        
-        if PlayerRoleRule.nightlyAbilities.contains(ability), evidence.eligibleNightCount >= 2 {
-            if evidence.nightActionCount == 0 {
-                return L10n.tr("Chronicle cross-check: this claim usually wants recurring night entries, but none were logged across %lld eligible night%@.", Int64(evidence.eligibleNightCount), evidence.eligibleNightCount == 1 ? "" : "s")
-            }
-            if evidence.nightActionCount < evidence.eligibleNightCount - 1 {
-                return L10n.tr(
-                    "Chronicle cross-check: only %lld night action%@ were logged across %lld eligible night%@, so the action trail is incomplete.",
-                    Int64(evidence.nightActionCount),
-                    evidence.nightActionCount == 1 ? "" : "s",
-                    Int64(evidence.eligibleNightCount),
-                    evidence.eligibleNightCount == 1 ? "" : "s"
-                )
-            }
+
+    private func parseNominationEvent(line: String, phaseIndex: Int) -> NominationEvent? {
+        guard line.contains(" nominated "), line.contains(". Votes: ") else {
+            return nil
         }
-        
-        if PlayerRoleRule.oncePerGameAbilities.contains(ability), evidence.actorEvents.isEmpty {
-            return L10n.tr("Chronicle cross-check: there is not yet any logged use for this one-shot claim, so it remains mostly social rather than mechanical.")
+
+        guard let nominator = namedSeats.first(where: { line.hasPrefix("\(displayName(for: $0)) nominated ") }) else {
+            return nil
         }
-        
-        return nil
+
+        let remaining = line.dropFirst(displayName(for: nominator).count + " nominated ".count)
+        guard let nominee = namedSeats.first(where: { remaining.contains("\(displayName(for: $0)). Votes: ") }) else {
+            return nil
+        }
+
+        let votersSection = line.components(separatedBy: ". Votes: ").last?.replacingOccurrences(of: ".", with: "") ?? ""
+        let voters = namedSeats.filter { seat in
+            votersSection.contains(displayName(for: seat))
+        }
+
+        return NominationEvent(phaseIndex: phaseIndex, nominator: nominator, nominee: nominee, voters: voters)
     }
-    
-    private func targetCrossCheckDetail(for claimed: Character) -> String? {
-        guard let ability = claimed.supportedAbility else { return nil }
-        
-        if ability == .professorResurrect, let invalidTarget = evidence.invalidProfessorTargetName {
-            return L10n.tr("Target cross-check: the claimed resurrection of %@ does not line up with an earlier recorded death.", invalidTarget)
+
+    private func seatNames(_ seats: [Seat]) -> String {
+        let names = seats.map(displayName(for:))
+        switch names.count {
+        case 0:
+            return L10n.tr("no-one")
+        case 1:
+            return names[0]
+        case 2:
+            return L10n.tr("%@ and %@", names[0], names[1])
+        default:
+            return L10n.tr("%@, and %@", names.dropLast().joined(separator: ", "), names.last ?? "")
         }
-        
-        if PlayerRoleRule.protectionAbilities.contains(ability), evidence.protectedTargetsThatLaterDied.count > 0 {
-            let targets = evidence.protectedTargetsThatLaterDied.joined(separator: ", ")
-            return L10n.tr("Target cross-check: protected target%@ %@ later died in the chronicle, so this story needs poisoning, drunkenness, a bypass, or a false claim to stay coherent.", evidence.protectedTargetsThatLaterDied.count == 1 ? "" : "s", targets)
-        }
-        
-        if PlayerRoleRule.attackAbilities.contains(ability), evidence.attackTargetsWithNoLaterDeath.count > 0 {
-            let targets = evidence.attackTargetsWithNoLaterDeath.prefix(2).joined(separator: ", ")
-            return L10n.tr("Target cross-check: claimed attack target%@ %@ have no later recorded death, which does not disprove the claim but does weaken a straightforward kill story.", evidence.attackTargetsWithNoLaterDeath.count == 1 ? "" : "s", targets)
-        }
-        
-        return nil
     }
+}
+
+private extension CharacterType {
+    var isGood: Bool {
+        self == .townsfolk || self == .outsider
+    }
+}
+
+private struct NominationEvent {
+    let phaseIndex: Int
+    let nominator: Seat
+    let nominee: Seat
+    let voters: [Seat]
 }
 
 private struct PlayerRoleRule {
@@ -741,11 +1273,11 @@ private struct PlayerChronicleEvidence {
                 .filter { !$0.isEmpty }
             
             if lines.isEmpty {
-                return [PhaseEntry(phaseIndex: index, phaseTitle: entry.title, line: "")]
+                return [PhaseEntry(phaseIndex: index, phase: entry.phase, phaseTitle: entry.title, line: "")]
             }
             
             return lines.map { line in
-                PhaseEntry(phaseIndex: index, phaseTitle: entry.title, line: line)
+                PhaseEntry(phaseIndex: index, phase: entry.phase, phaseTitle: entry.title, line: line)
             }
         }
     }
@@ -773,8 +1305,16 @@ private struct PlayerChronicleEvidence {
         var alive = true
         var count = 0
         
-        for index in game.phaseTimeline().indices {
-            if index == 0 || index.isMultiple(of: 2) == false {
+        for (index, entry) in game.phaseTimeline().enumerated() {
+            let isNightPhase: Bool
+            switch entry.phase {
+            case .firstNight, .night:
+                isNightPhase = true
+            case .day, .nomination:
+                isNightPhase = false
+            }
+
+            if isNightPhase {
                 if alive {
                     count += 1
                 }
@@ -862,10 +1402,19 @@ private struct PlayerChronicleEvidence {
 
 private struct PhaseEntry {
     let phaseIndex: Int
+    let phase: Game.TurnPhase
     let phaseTitle: String
     let line: String
     
     var isNightPhase: Bool {
-        phaseIndex == 0 || phaseIndex.isMultiple(of: 2) == false
+        if phase == .firstNight {
+            return true
+        }
+
+        if case .night = phase {
+            return true
+        }
+
+        return false
     }
 }

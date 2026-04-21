@@ -13,6 +13,7 @@ struct Game: Codable {
     enum TurnPhase: Equatable {
         case firstNight
         case day(Int)
+        case nomination(Int)
         case night(Int)
 
         var title: String {
@@ -21,6 +22,8 @@ struct Game: Codable {
                 return L10n.tr("First Night")
             case .day(let number):
                 return L10n.tr("Day %lld", Int64(number))
+            case .nomination(let number):
+                return L10n.tr("Nomination %lld", Int64(number))
             case .night(let number):
                 return L10n.tr("Night %lld", Int64(number))
             }
@@ -31,9 +34,11 @@ struct Game: Codable {
             case .firstNight:
                 return L10n.tr("Day 1")
             case .day(let number):
-                return L10n.tr("Night %lld", Int64(number + 1))
+                return L10n.tr("Nomination %lld", Int64(number))
+            case .nomination(let number):
+                return L10n.tr("Night %lld", Int64(number))
             case .night(let number):
-                return L10n.tr("Day %lld", Int64(number))
+                return L10n.tr("Day %lld", Int64(number + 1))
             }
         }
     }
@@ -119,11 +124,17 @@ struct Game: Codable {
             return .firstNight
         }
 
-        if inGameNote.count.isMultiple(of: 2) {
-            return .day(numOfDay)
-        }
+        let phaseOffset = inGameNote.count - 2
+        let cycle = phaseOffset / 3 + 1
 
-        return .night(numOfDay + 1)
+        switch phaseOffset % 3 {
+        case 0:
+            return .day(cycle)
+        case 1:
+            return .nomination(cycle)
+        default:
+            return .night(cycle)
+        }
     }
 
     var currentPhaseTitle: String {
@@ -132,6 +143,20 @@ struct Game: Codable {
 
     var nextPhaseTitle: String {
         currentPhase?.nextTitle ?? L10n.tr("First Night")
+    }
+
+    var isDayPhase: Bool {
+        if case .day = currentPhase {
+            return true
+        }
+        return false
+    }
+
+    var isNominationPhase: Bool {
+        if case .nomination = currentPhase {
+            return true
+        }
+        return false
     }
 
     mutating func startChronicleIfNeeded() {
@@ -148,6 +173,8 @@ struct Game: Codable {
             numOfDay = 1
             inGameNote.append("")
         case .day:
+            inGameNote.append("")
+        case .nomination:
             inGameNote.append("")
         case .night:
             numOfDay += 1
@@ -183,17 +210,23 @@ struct Game: Codable {
         inGameNote.last ?? ""
     }
 
-    func phaseTimeline() -> [(title: String, note: String)] {
+    func phaseTimeline() -> [(phase: TurnPhase, title: String, note: String)] {
         inGameNote.enumerated().map { index, note in
             if index == 0 {
-                return (L10n.tr("First Night"), note)
+                return (.firstNight, L10n.tr("First Night"), note)
             }
 
-            if (index + 1).isMultiple(of: 2) {
-                return (L10n.tr("Day %lld", Int64(index / 2 + 1)), note)
-            }
+            let phaseOffset = index - 1
+            let cycle = phaseOffset / 3 + 1
 
-            return (L10n.tr("Night %lld", Int64(index / 2 + 2)), note)
+            switch phaseOffset % 3 {
+            case 0:
+                return (.day(cycle), L10n.tr("Day %lld", Int64(cycle)), note)
+            case 1:
+                return (.nomination(cycle), L10n.tr("Nomination %lld", Int64(cycle)), note)
+            default:
+                return (.night(cycle), L10n.tr("Night %lld", Int64(cycle)), note)
+            }
         }
     }
 }
