@@ -8,8 +8,16 @@
 
 ## 👁️ Features
 
-  - **Player Circle Tracking**: Map out the seating arrangement of your local game with a dynamic positioning UI.
-  - **Role Claim Management**: Quickly assign and update role claims for every player.
+  - **Flexible Seat Layouts**: Arrange the grimoire with circle, square, or U-shaped seat layouts and freely reposition players on the board.
+  - **Claim and Reveal Tracking**: Record each player's claimed role during the game, then capture final revealed roles during endgame review.
+  - **Live Grimoire Board**: See player status at a glance with role icons, death markers, claim labels, and reveal-aware seat visuals.
+  - **Chronicle Notes by Phase**: Keep a running day/night log with phase-specific notes, player-tagged entries, and nomination records.
+  - **Ability Logging**: Record claimed ability uses with role-specific input flows for numbers, yes/no checks, targets, and character selections.
+  - **Nomination Tracking**: Track nominators, nominees, and voters during nomination phase with a dedicated nomination workflow.
+  - **Contradiction Review**: Surface conflicts between claims, logged actions, learned information, and final reveals to support deduction.
+  - **Game-End Review Support**: Use final reveal mode, evil-role reveal warnings, and outcome checks to review whether the recorded game state is complete.
+  - **Past Game Archive**: Save completed games locally, review their final board states and chronicle history, and replay them into a fresh setup.
+  - **Korean Localization Support**: Includes Korean translations with particle-aware localization for more natural generated text.
 
 -----
 
