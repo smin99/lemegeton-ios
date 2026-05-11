@@ -126,7 +126,24 @@ class BoardViewModel: ObservableObject {
     }
 
     func canCompleteGameAfterReveal() -> Bool {
-        currentGame.isAllRevealedCharacterRecorded()
+        currentGame.canCompleteAfterReveal()
+    }
+
+    func requiredEvilRevealCount() -> Int {
+        currentGame.setupCounts()?.evilRoles ?? 0
+    }
+
+    func revealedEvilRoleCount() -> Int {
+        currentGame.seats.filter {
+            guard let revealedCharacter = $0.player.revealedCharacter else {
+                return false
+            }
+            return revealedCharacter.type == .minion || revealedCharacter.type == .demon
+        }.count
+    }
+
+    func hasEnoughRevealedEvilRoles() -> Bool {
+        revealedEvilRoleCount() >= requiredEvilRevealCount()
     }
     
     func endGame(resetGame: Bool) {
@@ -152,6 +169,219 @@ class BoardViewModel: ObservableObject {
         saveState()
     }
     
+    // MARK: - Seat Layout Presets
+
+    func arrangeSeatsInCircle(boardSize: CGSize) {
+        let count = currentGame.seats.count
+        guard count > 0 else { return }
+
+        let center = CGPoint(x: boardSize.width / 2, y: boardSize.height / 2)
+        let padding: CGFloat = 50
+        let maxRadius = min(boardSize.width, boardSize.height) / 2 - padding
+        let minSeatSpacing: CGFloat = 70
+        let minRadius = count > 1 ? minSeatSpacing / (2 * sin(.pi / CGFloat(count))) : 0
+        let radius = min(maxRadius, max(minRadius, maxRadius * 0.5))
+
+        for i in 0..<count {
+            let angle = (CGFloat(i) / CGFloat(count)) * 2 * .pi - .pi / 2
+            currentGame.seats[i].x = center.x + radius * cos(angle)
+            currentGame.seats[i].y = center.y + radius * sin(angle)
+        }
+        saveState()
+    }
+
+    func arrangeSeatsInSquare(boardSize: CGSize) {
+        arrangeSeatsInThreeSides(boardSize: boardSize)
+    }
+
+    func arrangeSeatsInUShape(boardSize: CGSize) {
+        let count = currentGame.seats.count
+        guard count > 0 else { return }
+
+        let sidePadding: CGFloat = 50
+        let leftX = sidePadding
+        let rightX = boardSize.width - sidePadding
+        let topY = sidePadding
+        let bottomY = boardSize.height - sidePadding
+        let availableWidth = max(rightX - leftX, 0)
+        let availableHeight = max(bottomY - topY, 0)
+
+        if count == 1 {
+            currentGame.seats[0].x = boardSize.width / 2
+            currentGame.seats[0].y = bottomY
+            saveState()
+            return
+        }
+
+        if count == 2 {
+            currentGame.seats[0].x = leftX
+            currentGame.seats[0].y = bottomY
+            currentGame.seats[1].x = rightX
+            currentGame.seats[1].y = bottomY
+            saveState()
+            return
+        }
+
+        if count == 3 {
+            assignSeatsToClosestPositions([
+                CGPoint(x: leftX, y: bottomY),
+                CGPoint(x: boardSize.width / 2, y: bottomY),
+                CGPoint(x: rightX, y: bottomY)
+            ])
+            saveState()
+            return
+        }
+
+        let sideCount = max(1, count / 3)
+        let bottomCount = max(2, count - sideCount * 2)
+        let verticalSpacing = availableHeight / CGFloat(sideCount)
+        let horizontalSpacing = bottomCount > 1 ? availableWidth / CGFloat(bottomCount - 1) : 0
+
+        var seatPositions: [CGPoint] = []
+
+        for index in 0..<sideCount {
+            seatPositions.append(
+                CGPoint(
+                    x: leftX,
+                    y: topY + CGFloat(index) * verticalSpacing
+                )
+            )
+        }
+
+        for index in 0..<bottomCount {
+            seatPositions.append(
+                CGPoint(
+                    x: leftX + CGFloat(index) * horizontalSpacing,
+                    y: bottomY
+                )
+            )
+        }
+
+        for index in stride(from: sideCount - 1, through: 0, by: -1) {
+            seatPositions.append(
+                CGPoint(
+                    x: rightX,
+                    y: topY + CGFloat(index) * verticalSpacing
+                )
+            )
+        }
+
+        assignSeatsToClosestPositions(seatPositions)
+        saveState()
+    }
+
+    private func arrangeSeatsInThreeSides(boardSize: CGSize) {
+        let count = currentGame.seats.count
+        guard count > 0 else { return }
+
+        let sidePadding: CGFloat = 50
+        let leftX = sidePadding
+        let rightX = boardSize.width - sidePadding
+        let topY = sidePadding
+        let bottomY = boardSize.height - sidePadding
+        let sideBottom = bottomY - 100
+
+        if count == 1 {
+            currentGame.seats[0].x = boardSize.width / 2
+            currentGame.seats[0].y = bottomY
+            saveState()
+            return
+        }
+
+        if count == 2 {
+            currentGame.seats[0].x = leftX
+            currentGame.seats[0].y = (topY + sideBottom) / 2
+            currentGame.seats[1].x = rightX
+            currentGame.seats[1].y = (topY + sideBottom) / 2
+            saveState()
+            return
+        }
+
+        let sideCount = count / 3
+        let bottomCount = count - 2 * sideCount
+
+        var idx = 0
+
+        // Bottom row: start/end aligned with left and right columns
+        for i in 0..<bottomCount {
+            if bottomCount == 1 {
+                currentGame.seats[idx].x = boardSize.width / 2
+            } else {
+                let t = CGFloat(i) / CGFloat(bottomCount - 1)
+                currentGame.seats[idx].x = leftX + (rightX - leftX) * t
+            }
+            currentGame.seats[idx].y = bottomY
+            idx += 1
+        }
+
+        // Left side: evenly spaced, stops above bottom row
+        for i in 0..<sideCount {
+            currentGame.seats[idx].x = leftX
+            if sideCount == 1 {
+                currentGame.seats[idx].y = (topY + sideBottom) / 2
+            } else {
+                let t = CGFloat(i) / CGFloat(sideCount - 1)
+                currentGame.seats[idx].y = topY + (sideBottom - topY) * t
+            }
+            idx += 1
+        }
+
+        // Right side: evenly spaced, stops above bottom row
+        for i in 0..<sideCount {
+            currentGame.seats[idx].x = rightX
+            if sideCount == 1 {
+                currentGame.seats[idx].y = (topY + sideBottom) / 2
+            } else {
+                let t = CGFloat(i) / CGFloat(sideCount - 1)
+                currentGame.seats[idx].y = topY + (sideBottom - topY) * t
+            }
+            idx += 1
+        }
+
+        saveState()
+    }
+
+    private func assignSeatsToClosestPositions(_ targetPositions: [CGPoint]) {
+        guard targetPositions.count == currentGame.seats.count else { return }
+
+        var remainingSeatIndices = Set(currentGame.seats.indices)
+        var remainingTargetIndices = Set(targetPositions.indices)
+        var assignments: [(seatIndex: Int, targetIndex: Int)] = []
+
+        while let seedSeatIndex = remainingSeatIndices.first,
+              let seedTargetIndex = remainingTargetIndices.first {
+            var bestPair = (seatIndex: seedSeatIndex, targetIndex: seedTargetIndex)
+            var bestDistance = distance(
+                from: CGPoint(x: currentGame.seats[seedSeatIndex].x, y: currentGame.seats[seedSeatIndex].y),
+                to: targetPositions[seedTargetIndex]
+            )
+
+            for seatIndex in remainingSeatIndices {
+                let seatPosition = CGPoint(x: currentGame.seats[seatIndex].x, y: currentGame.seats[seatIndex].y)
+                for targetIndex in remainingTargetIndices {
+                    let candidateDistance = distance(from: seatPosition, to: targetPositions[targetIndex])
+                    if candidateDistance < bestDistance {
+                        bestDistance = candidateDistance
+                        bestPair = (seatIndex: seatIndex, targetIndex: targetIndex)
+                    }
+                }
+            }
+
+            assignments.append(bestPair)
+            remainingSeatIndices.remove(bestPair.seatIndex)
+            remainingTargetIndices.remove(bestPair.targetIndex)
+        }
+
+        for assignment in assignments {
+            currentGame.seats[assignment.seatIndex].x = targetPositions[assignment.targetIndex].x
+            currentGame.seats[assignment.seatIndex].y = targetPositions[assignment.targetIndex].y
+        }
+    }
+
+    private func distance(from start: CGPoint, to end: CGPoint) -> CGFloat {
+        hypot(end.x - start.x, end.y - start.y)
+    }
+
     func removeSeat(seat: Seat) {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
             currentGame.seats.remove(at: idx)
@@ -182,8 +412,12 @@ class BoardViewModel: ObservableObject {
     
     func updatePlayerNote(seat: Seat, note: String) {
         if let idx = currentGame.seats.firstIndex(where: { $0.id == seat.id }) {
+            let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedNote.isEmpty else { return }
+
             saveUndoSnapshotIfNeeded()
-            currentGame.seats[idx].player.updateNote(newNote: note)
+            let playerName = currentGame.seats[idx].player.name.isEmpty ? L10n.tr("Unnamed player") : currentGame.seats[idx].player.name
+            currentGame.appendCurrentPhaseEvent(L10n.tr("%@: %@", playerName, trimmedNote))
             saveState()
         }
     }
@@ -202,12 +436,8 @@ class BoardViewModel: ObservableObject {
         currentGame.seats[idx].player.possibleCharacters = character.map { [$0] } ?? []
         currentGame.seats[idx].player.activeAbilityTargetSeatID = nil
 
-        if let character {
-            if let previousClaim, previousClaim.id != character.id {
-                currentGame.appendCurrentPhaseEvent(L10n.tr("%@ changed their claimed role from %@ to %@.", playerName, previousClaim.localizedName, character.localizedName))
-            } else if previousClaim == nil {
-                currentGame.appendCurrentPhaseEvent(L10n.tr("%@ claimed %@.", playerName, character.localizedName))
-            }
+        if let character, previousClaim == nil {
+            currentGame.appendCurrentPhaseEvent(L10n.tr("%@ claimed %@.", playerName, character.localizedName))
         }
 
         saveState()
@@ -248,7 +478,7 @@ class BoardViewModel: ObservableObject {
             if let targetSeat {
                 let sourceName = currentGame.seats[sourceIndex].player.name.isEmpty ? L10n.tr("Unnamed player") : currentGame.seats[sourceIndex].player.name
                 let targetName = targetSeat.player.name.isEmpty ? L10n.tr("Unnamed player") : targetSeat.player.name
-                currentGame.appendCurrentPhaseEvent(L10n.tr("%@, the claimed Monk has said to protect %@.", sourceName, targetName))
+                currentGame.appendCurrentPhaseEvent(L10n.tr("%@ said to protect %@.", sourceName, targetName))
             }
         default:
             break
@@ -290,7 +520,35 @@ class BoardViewModel: ObservableObject {
                 voterSummary
             )
         )
+        if let phaseIndex = currentGame.currentPhaseIndex {
+            currentGame.nominationRecords.append(
+                NominationRecord(
+                    phaseIndex: phaseIndex,
+                    nominatorSeatID: nominator.id,
+                    nomineeSeatID: nominee.id,
+                    voterSeatIDs: voters.map(\.id)
+                )
+            )
+        }
         saveState()
+    }
+
+    func previousNominationNominatorNames() -> [String] {
+        guard let currentPhaseIndex = currentGame.currentPhaseIndex else {
+            return []
+        }
+
+        let previousRecords = currentGame.nominationRecords.filter { $0.phaseIndex < currentPhaseIndex }
+        guard let latestNominationPhaseIndex = previousRecords.map(\.phaseIndex).max() else {
+            return []
+        }
+
+        return previousRecords
+            .filter { $0.phaseIndex == latestNominationPhaseIndex }
+            .compactMap { record in
+                currentGame.seats.first(where: { $0.id == record.nominatorSeatID })
+            }
+            .map(displayName(for:))
     }
 
     var nominationNominator: Seat? {

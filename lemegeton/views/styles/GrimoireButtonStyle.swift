@@ -13,8 +13,10 @@ struct GrimoireButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.custom("Georgia-Bold", size: 16))
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .foregroundColor(isDestructive ? .red : .themeSecondary)
+            .contentShape(Rectangle())
             // Adds a "fade" effect when the user taps the button
             .opacity(configuration.isPressed ? 0.7 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)

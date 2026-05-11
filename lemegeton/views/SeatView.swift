@@ -21,6 +21,10 @@ struct SeatView: View {
     @State private var showRevealedCharacterList = false
     @State private var showEditNameSheet = false
     @State private var activeAbilitySheet: SupportedAbility?
+
+    private var displayCharacter: Character? {
+        seat.player.revealedCharacter ?? seat.player.character
+    }
     
     var body: some View {
         if boardVM.currentGame.gameState == .set_up {
@@ -40,8 +44,18 @@ struct SeatView: View {
                                 boardVM.handleNominationSeatTap(seat)
                             } label: {
                                 CircleImageView(
-                                    character: $seat.player.character,
-                                    isDead: $seat.player.isDead
+                                    character: displayCharacter,
+                                    isDead: seat.player.isDead
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else if boardVM.currentGame.gameState == .role_reveal {
+                            Button {
+                                showRevealedCharacterList = true
+                            } label: {
+                                CircleImageView(
+                                    character: displayCharacter,
+                                    isDead: seat.player.isDead
                                 )
                             }
                             .buttonStyle(.plain)
@@ -54,26 +68,6 @@ struct SeatView: View {
                                         "Claimed Role",
                                         systemImage: "person.fill.questionmark"
                                     )
-                                }
-                                if boardVM.currentGame.gameState == .role_reveal {
-                                    Button(action: {
-                                        showRevealedCharacterList = true
-                                    }) {
-                                        Label(
-                                            "Revealed Role",
-                                            systemImage: "person.fill.checkmark"
-                                        )
-                                    }
-                                    if let claimedCharacter = seat.player.character {
-                                        Button(action: {
-                                            boardVM.updateRevealedRole(seat: seat, character: claimedCharacter)
-                                        }) {
-                                            Label(
-                                                "Reveal Same as Claim",
-                                                systemImage: "checkmark.circle"
-                                            )
-                                        }
-                                    }
                                 }
                                 if let ability = seat.player.character?.supportedAbility {
                                     Button(action: {
@@ -96,19 +90,14 @@ struct SeatView: View {
                                     )
                                 }
                                 Button(action: {
-                                    showEditNameSheet = true
-                                }) {
-                                    Label("Edit Name", systemImage: "pencil.line")
-                                }
-                                Button(action: {
                                     showNoteEditor = true
                                 }) {
                                     Label("Write Note", systemImage: "note.text")
                                 }
                             } label: {
                                 CircleImageView(
-                                    character: $seat.player.character,
-                                    isDead: $seat.player.isDead
+                                    character: displayCharacter,
+                                    isDead: seat.player.isDead
                                 )
                             }
                         }
@@ -135,8 +124,8 @@ struct SeatView: View {
                                 showNoteEditor = false
                             },
                             buttonTitle: L10n.tr("Done"),
-                            placeholder: L10n.tr("Write a private note"),
-                            note: seat.player.note
+                            placeholder: L10n.tr("Write what happened during this phase"),
+                            note: ""
                         )
                     }
                     .sheet(isPresented: $showCharacterList) {
@@ -242,8 +231,9 @@ struct SeatView: View {
                         .minimumScaleFactor(0.8)
                 }
 
-                if let revealedRoleName = seat.player.revealedCharacter?.localizedName {
-                    Text(L10n.tr("Revealed: %@.", revealedRoleName))
+                if let claimedRoleName = seat.player.character?.localizedName,
+                   seat.player.revealedCharacter != nil {
+                    Text(L10n.tr("Claim: %@.", claimedRoleName))
                         .font(.caption2)
                         .frame(width: 96)
                         .foregroundStyle(.themeOnSurface.opacity(0.78))
@@ -340,7 +330,12 @@ struct SeatView: View {
         }
 
         let actorName = seat.player.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.tr("Unnamed player") : seat.player.name
-        guard let summary = ability.chronicleSummary(actorName: actorName, selection: selection) else {
+        let contextNames = ability == .townCrierInfo ? boardVM.previousNominationNominatorNames() : []
+        guard let summary = ability.chronicleSummary(
+            actorName: actorName,
+            selection: selection,
+            contextNames: contextNames
+        ) else {
             return
         }
 
@@ -418,7 +413,7 @@ private struct SetupSeatView: View {
     var body: some View {
         VStack(spacing: seatSpacing) {
             ZStack(alignment: .topTrailing) {
-                CircleImageView(character: $seat.player.character, isDead: $seat.player.isDead)
+                CircleImageView(character: seat.player.character, isDead: seat.player.isDead)
 
                 Button {
                     boardVM.removeSeat(seat: seat)
@@ -563,16 +558,16 @@ private struct SetupSeatView: View {
 }
 
 private struct CircleImageView: View {
-    @Binding var character: Character?
-    @Binding var isDead: Bool
+    let character: Character?
+    let isDead: Bool
     
     var body: some View {
         Circle()
             .fill(Color.white)
             .frame(width: SEAT_SIZE, height: SEAT_SIZE)
             .overlay(content: {
-                if character != nil {
-                    Image(character!.imageName)
+                if let character {
+                    Image(character.imageName)
                         .resizable()
                         .scaledToFill()
                         .frame(width: SEAT_SIZE, height: SEAT_SIZE)

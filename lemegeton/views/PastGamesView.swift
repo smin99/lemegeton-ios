@@ -236,13 +236,17 @@ private struct ReadOnlySeatView: View {
 
     private let seatSize: CGFloat = 60
 
+    private var displayCharacter: Character? {
+        seat.player.revealedCharacter ?? seat.player.character
+    }
+
     var body: some View {
         VStack(spacing: 6) {
             Circle()
                 .fill(Color.white)
                 .frame(width: seatSize, height: seatSize)
                 .overlay {
-                    if let character = seat.player.character {
+                    if let character = displayCharacter {
                         Image(character.imageName)
                             .resizable()
                             .scaledToFill()
@@ -291,8 +295,9 @@ private struct ReadOnlySeatView: View {
                     .minimumScaleFactor(0.75)
             }
 
-            if let revealedRoleName = seat.player.revealedCharacter?.localizedName {
-                Text(L10n.tr("Revealed: %@.", revealedRoleName))
+            if let claimedRoleName = seat.player.character?.localizedName,
+               seat.player.revealedCharacter != nil {
+                Text(L10n.tr("Claim: %@.", claimedRoleName))
                     .frame(width: seatSize + 24)
                     .font(.caption2)
                     .foregroundStyle(.themeOnSurface.opacity(0.78))

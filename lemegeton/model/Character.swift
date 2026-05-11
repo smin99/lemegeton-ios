@@ -87,6 +87,8 @@ struct Character: Codable, Identifiable, Hashable {
             return .poisonerPoison
         case "trouble_brewing_022":
             return .impKill
+        case "sects_violets_001":
+            return .clockmakerInfo
         case "bad_moon_001":
             return .grandmotherInfo
         case "bad_moon_002":

@@ -9,10 +9,14 @@ import SwiftUI
 import Combine
 
 struct BoardView: View {
+    private static let collapsedChronicleInset: CGFloat = 84
+    private static let expandedChronicleInset: CGFloat = 132
+    private static let nominationOverlayInset: CGFloat = 232
+
     @StateObject var boardVM: BoardViewModel = BoardViewModel()
     
     enum ActiveAlert: Identifiable {
-        case resetBoard, cannotStartGame, cannotEndGame, beginRoleReveal, cannotCompleteGame, resetAfterCompleteGame
+        case resetBoard, cannotStartGame, cannotEndGame, beginRoleReveal, cannotCompleteGame, insufficientEvilReveals, resetAfterCompleteGame
         var id: Int { hashValue }
         
         var title: String {
@@ -27,6 +31,8 @@ struct BoardView: View {
                 L10n.tr("Begin final reveal?")
             case .cannotCompleteGame:
                 L10n.tr("Cannot complete the game")
+            case .insufficientEvilReveals:
+                L10n.tr("Not enough evil characters are revealed")
             case .resetAfterCompleteGame:
                 L10n.tr("Restart with same board?")
             }
@@ -43,7 +49,9 @@ struct BoardView: View {
             case .beginRoleReveal:
                 L10n.tr("This will move the game into the final reveal stage so you can record each player's actual role.")
             case .cannotCompleteGame:
-                L10n.tr("Record every player's revealed role before completing the game.")
+                L10n.tr("Record every evil or still-hidden player's revealed role before completing the game.")
+            case .insufficientEvilReveals:
+                L10n.tr("Not enough evil characters are revealed yet.")
             case .resetAfterCompleteGame:
                 L10n.tr("Restart will keep the current board setup including player name and seats.")
             }
@@ -115,7 +123,7 @@ struct BoardView: View {
 
                         if boardVM.currentGame.gameState == .in_game && boardVM.currentGame.isNominationPhase {
                             NominationPhaseControlsView(boardVM: boardVM)
-                                .padding(.top, isChronicleSummaryExpanded ? 132 : 84)
+                                .padding(.top, isChronicleSummaryExpanded ? Self.expandedChronicleInset : Self.collapsedChronicleInset)
                                 .padding(.horizontal, 16)
                         }
 
@@ -226,7 +234,13 @@ struct BoardView: View {
                                         .background(Color(.themeTertiary))
 
                                     Button {
-                                        activeAlert = boardVM.canCompleteGameAfterReveal() ? .resetAfterCompleteGame : .cannotCompleteGame
+                                        if !boardVM.canCompleteGameAfterReveal() {
+                                            activeAlert = .cannotCompleteGame
+                                        } else if !boardVM.hasEnoughRevealedEvilRoles() {
+                                            activeAlert = .insufficientEvilReveals
+                                        } else {
+                                            activeAlert = .resetAfterCompleteGame
+                                        }
                                     } label: {
                                         Label("Complete Game", systemImage: "checkmark.seal")
                                     }
@@ -369,6 +383,21 @@ struct BoardView: View {
                         message: Text(alert.message),
                         dismissButton: .default(Text("OK"))
                     )
+                case .insufficientEvilReveals:
+                    return Alert(
+                        title: Text(alert.title),
+                        message: Text(
+                            L10n.tr(
+                                "Only %lld of %lld evil roles are currently revealed. You can go back and reveal more, or ignore this warning and continue.",
+                                Int64(boardVM.revealedEvilRoleCount()),
+                                Int64(boardVM.requiredEvilRevealCount())
+                            )
+                        ),
+                        primaryButton: .default(Text(L10n.tr("Ignore Warning"))) {
+                            activeAlert = .resetAfterCompleteGame
+                        },
+                        secondaryButton: .cancel(Text(L10n.tr("Back")))
+                    )
                 case .resetAfterCompleteGame:
                     primaryButton = .default(Text("Restart")) {
                         boardVM.endGame(resetGame: false)
@@ -405,10 +434,10 @@ struct BoardView: View {
             return 0
         }
 
-        var inset: CGFloat = isChronicleSummaryExpanded ? 132 : 84
+        var inset: CGFloat = isChronicleSummaryExpanded ? Self.expandedChronicleInset : Self.collapsedChronicleInset
 
         if boardVM.currentGame.gameState == .in_game && boardVM.currentGame.isNominationPhase {
-            inset += 180
+            inset += Self.nominationOverlayInset
         }
 
         return inset
